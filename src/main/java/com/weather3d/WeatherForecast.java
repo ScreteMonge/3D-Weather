@@ -1,4 +1,4 @@
-package com.example;
+package com.weather3d;
 
 import lombok.Getter;
 

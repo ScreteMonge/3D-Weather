@@ -1,4 +1,4 @@
-package com.example;
+package com.weather3d;
 
 public enum BiomeChunkMap
 {

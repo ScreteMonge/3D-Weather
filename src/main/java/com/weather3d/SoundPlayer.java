@@ -1,14 +1,12 @@
-package com.example;
+package com.weather3d;
 
 import javax.inject.Inject;
-import javax.sound.midi.Track;
 
 import jaco.mp3.player.MP3Player;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.callback.ClientThread;
 
-import java.io.*;
 import java.net.URI;
 
 public class SoundPlayer
