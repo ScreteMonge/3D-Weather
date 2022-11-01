@@ -1,6 +1,9 @@
 # 3D Weather Plugin
 A plugin that gives immersive, 3D weather with dynamic weather cycles and ambience.
 
+Please note that this plugin looks best when the colour of the skybox is changed through the default Skybox plugin.
+It looks even better with 117HD enabled!
+
 ## Gallery
 
 ### Rain
