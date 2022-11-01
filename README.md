@@ -5,15 +5,15 @@ A plugin that gives immersive, 3D weather with dynamic weather cycles and ambien
 
 ### Rain
 
-![Rain](https://imgur.com/QEPi1cn.gif)
+![Rain](https://imgur.com/Q7RSYp0.gif)
 
 ### Snow
 
-![Snow](https://imgur.com/n1Qr3wK.gif)
+![Snow](https://imgur.com/Ps5jQS2.gif)
 
 ### Fog
 
-![Fog](https://imgur.com/lKVzoVe.gif)
+![Fog](https://imgur.com/N5fG6v7.gif)
 
 ### Ashfall
 
