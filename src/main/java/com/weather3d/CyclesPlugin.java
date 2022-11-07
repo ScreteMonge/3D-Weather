@@ -101,7 +101,7 @@ public class CyclesPlugin extends Plugin
 		{
 			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
-			syncSeason();
+			currentSeason = syncSeason();
 			setConfigWeather();
 		}
 	}
@@ -308,6 +308,11 @@ public class CyclesPlugin extends Plugin
 
 			handleAmbienceChanges();
 			return;
+		}
+
+		if (event.getKey().equals("seasonType"))
+		{
+			currentSeason = syncSeason();
 		}
 
 		if (event.getKey().equals("toggleOverlay"))
