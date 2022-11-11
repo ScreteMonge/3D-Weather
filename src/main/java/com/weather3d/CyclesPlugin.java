@@ -217,8 +217,14 @@ public class CyclesPlugin extends Plugin
 
 		for (SoundPlayer soundPlayer : soundPlayers)
 		{
-			if (!soundPlayer.isPlaying()) {
+			if (!soundPlayer.isPlaying())
+			{
 				continue;
+			}
+
+			if (!currentWeather.isHasSound() || currentWeather.getSoundEffect() != soundPlayer.getSavedSound())
+			{
+				soundPlayer.setFading(true);
 			}
 
 			int ticks = client.getTickCount();
@@ -276,14 +282,14 @@ public class CyclesPlugin extends Plugin
 		currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 		currentSeason = syncSeason();
 		currentWeather = syncWeather(currentSeason, currentBiome);
-		setConfigWeather();
 
 		if (!currentWeather.isHasPrecipitation())
 		{
 			clearWeatherObjects();
-			handleAmbienceChanges();
 			return;
 		}
+
+		handleAmbienceChanges();
 
 		if (!weatherObjectsArray.isEmpty())
 		{

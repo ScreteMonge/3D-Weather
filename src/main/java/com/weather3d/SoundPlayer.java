@@ -32,7 +32,7 @@ public class SoundPlayer
         {
             String soundLink = soundEffect.getSoundFile();
 
-            clientThread.invoke(() -> {
+            clientThread.invokeLater(() -> {
                 try
                 {
                     savedSound = soundEffect;
