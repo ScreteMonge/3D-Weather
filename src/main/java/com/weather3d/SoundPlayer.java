@@ -72,43 +72,27 @@ public class SoundPlayer
 
     public int getEndVolume()
     {
-        int volDensity;
+        double volDensity;
         switch(config.weatherDensity())
         {
             case LOW:
+                volDensity = 0.25;
+                break;
+            default:
+            case MEDIUM:
+                volDensity = 0.5;
+                break;
+            case HIGH:
+                volDensity = 0.75;
+                break;
+            case HIGHEST:
                 volDensity = 1;
                 break;
-            default:
-            case MEDIUM:
-                volDensity = 2;
-                break;
-            case HIGH:
-                volDensity = 3;
-                break;
-            case HIGHEST:
-                volDensity = 4;
-                break;
         }
 
-        int volAmbience;
-        switch(config.ambientVolume())
-        {
-            case LOW:
-                volAmbience = 10;
-                break;
-            default:
-            case MEDIUM:
-                volAmbience = 15;
-                break;
-            case HIGH:
-                volAmbience = 20;
-                break;
-            case HIGHEST:
-                volAmbience = 25;
-                break;
-        }
-
-        return volDensity * volAmbience;
+        double configVolume = config.ambientVolume();
+        int endVolume = (int) (configVolume * volDensity);
+        return endVolume;
     }
 
     public void setVolumeLevel(int volumeLevel)

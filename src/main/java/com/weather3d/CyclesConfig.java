@@ -1,8 +1,6 @@
 package com.weather3d;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.*;
 
 @ConfigGroup("3Dweather")
 public interface CyclesConfig extends Config {
@@ -31,13 +29,6 @@ public interface CyclesConfig extends Config {
 		SUMMER,
 		AUTUMN,
 		WINTER
-	}
-
-	enum AmbienceVolume	{
-		LOW,
-		MEDIUM,
-		HIGH,
-		HIGHEST
 	}
 
 	@ConfigItem(
@@ -101,11 +92,11 @@ public interface CyclesConfig extends Config {
 			description = "Sets the volume of ambient Weather sounds",
 			position = 6
 	)
-	default AmbienceVolume ambientVolume()
+	@Units(Units.PERCENT)
+	@Range(max = 100)
+	default int ambientVolume()
 	{
-		return AmbienceVolume.MEDIUM;
+		return 50;
 	}
-
-
 
 }

@@ -198,7 +198,7 @@ public class CyclesPlugin extends Plugin
 		}
 
 		// Accounts for random errors causing drops in sound, restarting sound after logging out and relogging back in or toggling Toggle Ambience on
-		if (currentWeather.isHasSound())
+		if (currentWeather.isHasSound() && config.toggleAmbience() && config.ambientVolume() != 0)
 		{
 			boolean isPlaying = false;
 			for (SoundPlayer soundPlayer : soundPlayers)
@@ -275,11 +275,13 @@ public class CyclesPlugin extends Plugin
 		int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 		currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 		currentSeason = syncSeason();
+		currentWeather = syncWeather(currentSeason, currentBiome);
 		setConfigWeather();
 
 		if (!currentWeather.isHasPrecipitation())
 		{
 			clearWeatherObjects();
+			handleAmbienceChanges();
 			return;
 		}
 
@@ -334,6 +336,23 @@ public class CyclesPlugin extends Plugin
 				{
 					soundPlayer.stopClip();
 					soundPlayer.setLoop(false);
+				}
+			}
+		}
+
+		if (event.getKey().equals("ambientVolume"))
+		{
+			if (!config.toggleAmbience())
+			{
+				return;
+			}
+
+			for (SoundPlayer soundPlayer : soundPlayers)
+			{
+				int endVolume = soundPlayer.getEndVolume();
+				if (soundPlayer.getCurrentVolume() > endVolume)
+				{
+					soundPlayer.setVolumeLevel(endVolume);
 				}
 			}
 		}
@@ -608,6 +627,11 @@ public class CyclesPlugin extends Plugin
 
 	public void fadeSoundPlayers()
 	{
+		if (!conditionsSynced)
+		{
+			return;
+		}
+
 		for (SoundPlayer soundPlayer : soundPlayers)
 		{
 			soundPlayer.setFading(true);
