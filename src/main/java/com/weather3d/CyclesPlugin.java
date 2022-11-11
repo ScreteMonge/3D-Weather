@@ -26,7 +26,7 @@ import java.util.ArrayList;
 @PluginDescriptor(
 	name = "3D Weather",
 	description = "Creates immersive 3D Weather with dynamic Weather cycles and ambience",
-	tags = {"immersion,", "weather", "ambience", "graphics"}
+	tags = {"immersion,", "weather", "ambience", "audio", "graphics"}
 )
 public class CyclesPlugin extends Plugin
 {
