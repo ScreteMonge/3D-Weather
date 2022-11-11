@@ -355,11 +355,14 @@ public class CyclesPlugin extends Plugin
 
 			for (SoundPlayer soundPlayer : soundPlayers)
 			{
-				int endVolume = soundPlayer.getEndVolume();
-				if (soundPlayer.getCurrentVolume() > endVolume)
+				if (soundPlayer.isFading())
 				{
-					soundPlayer.setVolumeLevel(endVolume);
+					soundPlayer.stopClip();
+					continue;
 				}
+
+				int endVolume = soundPlayer.getEndVolume();
+				soundPlayer.setVolumeLevel(endVolume);
 			}
 		}
 	}
