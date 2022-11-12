@@ -229,7 +229,7 @@ public class CyclesPlugin extends Plugin
 
 			int ticks = client.getTickCount();
 
-			//Prevent soundplayers from starting before other things have been initialized, then be sure to loop them every 2 minutes or so
+			//Prevent soundplayers from starting before other things have been initialized, then be sure to loop them every 2 minutes or so/125 ticks
 			if (soundPlayer.isLoop() && ticks > 3 && ticks % 125 == 0)
 			{
 				if (soundPlayer.isFading())
@@ -238,7 +238,13 @@ public class CyclesPlugin extends Plugin
 				}
 				else
 				{
-					handleSoundPlayers(false, soundPlayer.getSavedSound(), 15);
+					//Start next loop at low volume for natural build up as last soundplayer regresses - except at low volumes, where the jump is too noticeable
+					int restartVolume = soundPlayer.getCurrentVolume() / 2;
+					if (soundPlayer.getCurrentVolume() < 10)
+					{
+						restartVolume = soundPlayer.getCurrentVolume();
+					}
+					handleSoundPlayers(false, soundPlayer.getSavedSound(), restartVolume);
 					break;
 				}
 			}
@@ -281,7 +287,7 @@ public class CyclesPlugin extends Plugin
 		int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 		currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 		currentSeason = syncSeason();
-		currentWeather = syncWeather(currentSeason, currentBiome);
+		setConfigWeather();
 
 		if (!currentWeather.isHasPrecipitation())
 		{
@@ -355,6 +361,11 @@ public class CyclesPlugin extends Plugin
 
 			for (SoundPlayer soundPlayer : soundPlayers)
 			{
+				if (!soundPlayer.isPlaying())
+				{
+					continue;
+				}
+
 				if (soundPlayer.isFading())
 				{
 					soundPlayer.stopClip();
@@ -649,18 +660,35 @@ public class CyclesPlugin extends Plugin
 
 	public void transitionVolume(SoundPlayer soundPlayer)
 	{
+		if (!soundPlayer.isPlaying())
+		{
+			return;
+		}
+
 		int currentVol = soundPlayer.getCurrentVolume();
 		int endVol = soundPlayer.getEndVolume();
-
 		int change = endVol - currentVol;
 
-		if (change > 0)
+		if (change == 0)
+		{
+			return;
+		}
+
+		if (change > 1)
 		{
 			soundPlayer.setVolumeLevel(currentVol + VOL_CHANGE_CONSTANT);
 		}
-		else if (change < 0)
+		else if (change == 1)
+		{
+			soundPlayer.setVolumeLevel(currentVol + 1);
+		}
+		else if (change < -1)
 		{
 			soundPlayer.setVolumeLevel(currentVol - VOL_CHANGE_CONSTANT);
+		}
+		else
+		{
+			soundPlayer.setVolumeLevel(currentVol - 1);
 		}
 	}
 
