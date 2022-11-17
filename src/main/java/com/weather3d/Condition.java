@@ -32,10 +32,12 @@ public enum Condition {
             0, 0, 0, 0, 1),
     WEATHER_RAINING("Raining", "/Weather - Raining.png", true, true, SoundEffect.RAIN,
             200, 400, 800, 1200, 2),
+    WEATHER_SANDSTORM("Sandstorm", "/Weather - Snow.png", true, true, SoundEffect.WIND,
+            5, 10, 15, 20, 8),
     WEATHER_SNOWING("Snowing", "/Weather - Snow.png", true, true, SoundEffect.WIND,
             200, 400, 800, 1200, 4),
     WEATHER_STORM("Stormy", "/Weather - Stormy.png", true, true, SoundEffect.THUNDERSTORM,
-            300, 600, 1000, 1400, 1),
+            300, 600, 1000, 4000, 1),
     WEATHER_SUNNY("Clear", "/Weather - Sunny.png", false, false, null,
             0, 0, 0, 0, 1),
 

@@ -32,7 +32,7 @@ Weather can be manually set or dynamically self-regulated.
 
 ![Config](https://imgur.com/fpStaA2.png)
 
-For Dynamic Weather, the Weather will automatically loop based on your Season and Biome. 
+For Dynamic Weather, the Weather will automatically loop based on your Season and Biome every 15 minutes. 
 Season can be set or dynamically self-regulated as well, changing every 7 days based on Jagex time.
 Naturally, Winter season will feature more frequent colder, precipitous Weathers, while Summer will tend to be drier.
 

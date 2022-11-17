@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.callback.ClientThread;
 
-import java.net.URI;
+import java.net.URL;
 
 public class SoundPlayer
 {
@@ -25,33 +25,29 @@ public class SoundPlayer
     @Getter
     private SoundEffect savedSound;
     private final MP3Player trackPlayer = new MP3Player();
+    private Thread handlePlayThread = null;
 
     public void playClip(SoundEffect soundEffect, int volume)
     {
-        try
-        {
-            String soundLink = soundEffect.getSoundFile();
+        trackPlayer.getPlayList().clear();
 
-            clientThread.invoke(() -> {
-                try
-                {
-                    savedSound = soundEffect;
-                    trackPlayer.getPlayList().clear();
-                    trackPlayer.addToPlayList(new URI(soundLink).toURL());
-                    trackPlayer.setVolume(volume);
-                    trackPlayer.play();
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                }
-            });
+        handlePlayThread = new Thread(() -> {
+            try
+            {
+                String soundLink = soundEffect.getSoundFile();
+                savedSound = soundEffect;
+                trackPlayer.addToPlayList(new URL(soundLink));
+                trackPlayer.setVolume(volume);
+                trackPlayer.play();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
 
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+        handlePlayThread.start();
+
     }
 
     public void stopClip()
@@ -84,7 +80,7 @@ public class SoundPlayer
             case HIGH:
                 volDensity = 0.75;
                 break;
-            case HIGHEST:
+            case EXTREME:
                 volDensity = 1;
                 break;
         }
@@ -103,5 +99,4 @@ public class SoundPlayer
         }
         trackPlayer.setVolume(volumeLevel);
     }
-
 }

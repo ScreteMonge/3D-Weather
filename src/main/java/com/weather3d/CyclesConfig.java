@@ -20,7 +20,7 @@ public interface CyclesConfig extends Config {
 		LOW,
 		MEDIUM,
 		HIGH,
-		HIGHEST
+		EXTREME
 	}
 
 	enum SeasonType {

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Random;
 
 @Slf4j
 @PluginDescriptor(
@@ -47,15 +48,20 @@ public class CyclesPlugin extends Plugin
 	@Inject
 	private SoundPlayer soundPlayer2 = new SoundPlayer();
 
-	private ArrayList<RuneLiteObject> weatherObjectsArray = new ArrayList<>();
+	private SoundPlayer[] soundPlayers = new SoundPlayer[3];
+
+
+	private ArrayList<RuneLiteObject> weatherObjArray0 = new ArrayList<>();
 	private Model ashModel;
 	private Model fogModel;
 	private Model rainModel;
+	private Model sandModel;
 	private Model snowModel;
 	private Model starModel;
 	private Animation ashAnimation;
 	private Animation fogAnimation;
 	private Animation rainAnimation;
+	private Animation sandAnimation;
 	private Animation snowAnimation;
 	private Animation starAnimation;
 	private final int ASH_MODEL = 27835;
@@ -64,6 +70,8 @@ public class CyclesPlugin extends Plugin
 	private final int FOG_ANIMATION = 4516;
 	private final int RAIN_MODEL = 15524;
 	private final int RAIN_ANIMATION = 7001;
+	private final int SAND_MODEL = 9994;
+	private final int SAND_ANIMATION = 2882;
 	private final int SNOW_MODEL = 27835;
 	private final int SNOW_ANIMATION = 7000;
 	private final int STAR_MODEL = 16374;
@@ -71,7 +79,7 @@ public class CyclesPlugin extends Plugin
 
 	private boolean loadedAnimsModels = false;
 	private int startRotation = 0;
-	private final int CHANGE_CONSTANT = 50;
+	private int objSpawnNum = 50;
 	private int relocationNum;
 	private static final ZoneId JAGEX = ZoneId.of("Europe/London");
 	private final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("DDD:hh:mm");
@@ -87,7 +95,7 @@ public class CyclesPlugin extends Plugin
 	private boolean weatherTransitioning = false;
 	private boolean startWeatherTransition = false;
 	private final int VOL_CHANGE_CONSTANT = 2;
-	private SoundPlayer[] soundPlayers = new SoundPlayer[3];
+
 
 	@Override
 	protected void startUp() throws Exception
@@ -162,21 +170,18 @@ public class CyclesPlugin extends Plugin
 			}
 
 			currentSeason = syncSeason();
-
 			Condition nextWeather = syncWeather(currentSeason, currentBiome);
 
 			if (nextWeather != currentWeather)
 			{
 				weatherTransitioning = true;
 				startWeatherTransition = true;
-				currentWeather = nextWeather;
+				setConfigWeather();
 				handleAmbienceChanges();
 			}
 
 			conditionsSynced = true;
 		}
-
-		relocationNum = getMaxWeatherObjects(currentWeather) / 10;
 
 		if (savedZPlane != client.getPlane())
 		{
@@ -297,11 +302,11 @@ public class CyclesPlugin extends Plugin
 
 		handleAmbienceChanges();
 
-		if (!weatherObjectsArray.isEmpty())
+		if (!weatherObjArray0.isEmpty())
 		{
-			int size = weatherObjectsArray.size() / 2;
+			int size = weatherObjArray0.size() / 2;
 			clearWeatherObjects();
-			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjectsArray);
+			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjArray0);
 		}
 	}
 
@@ -388,16 +393,16 @@ public class CyclesPlugin extends Plugin
 		if (currentWeather.isHasPrecipitation())
 		{
 			int maxObjects = getMaxWeatherObjects(currentWeather);
-			if (weatherObjectsArray.size() < maxObjects)
+			if (weatherObjArray0.size() < maxObjects)
 			{
-				renderWeather(CHANGE_CONSTANT, getConfigModel(), getConfigAnimation(), weatherObjectsArray);
+				renderWeather(objSpawnNum, getConfigModel(), getConfigAnimation(), weatherObjArray0);
 			}
-			else if (weatherObjectsArray.size() == maxObjects)
+			else if (weatherObjArray0.size() == maxObjects)
 			{
 				if (client.getTickCount() % currentWeather.getChangeRate() == 0)
 				{
 					relocateObjects(relocationNum);
-					if (startRotation >= getMaxWeatherObjects(currentWeather))
+					if (startRotation > getMaxWeatherObjects(currentWeather))
 					{
 						startRotation = 0;
 					}
@@ -405,13 +410,13 @@ public class CyclesPlugin extends Plugin
 			}
 			else
 			{
-				trimWeatherArray(maxObjects, maxObjects + CHANGE_CONSTANT);
+				trimWeatherArray(maxObjects, maxObjects + objSpawnNum);
 			}
 
 		}
-		else if (!weatherObjectsArray.isEmpty())
+		else if (!weatherObjArray0.isEmpty())
 		{
-			trimWeatherArray(0, CHANGE_CONSTANT);
+			trimWeatherArray(0, objSpawnNum);
 		}
 	}
 
@@ -437,7 +442,7 @@ public class CyclesPlugin extends Plugin
 				return weatherCondition.getObjMed();
 			case HIGH:
 				return weatherCondition.getObjHigh();
-			case HIGHEST:
+			case EXTREME:
 				return weatherCondition.getObjHighest();
 		}
 	}
@@ -470,18 +475,18 @@ public class CyclesPlugin extends Plugin
 
 	public void clearWeatherObjects()
 	{
-		for (RuneLiteObject runeLiteObject : weatherObjectsArray)
+		for (RuneLiteObject runeLiteObject : weatherObjArray0)
 		{
 			runeLiteObject.setActive(false);
 		}
-		weatherObjectsArray.clear();
+		weatherObjArray0.clear();
 	}
 
 	public void trimWeatherArray(int start, int end)
 	{
 		for (int i = start; i < end; i++)
 		{
-			removeWeatherObject(start, weatherObjectsArray);
+			removeWeatherObject(start, weatherObjArray0);
 		}
 	}
 
@@ -492,15 +497,16 @@ public class CyclesPlugin extends Plugin
 		for (int i = startRotation; i < startRotation + numToRelocate; i++)
 		{
 			ArrayList<Tile> availableTiles = getAvailableTiles();
-			int roll = (int) (Math.random() * availableTiles.size());
+			Random random = new Random();
+			int roll = random.nextInt(availableTiles.size());
 			Tile nextTile = availableTiles.get(roll);
 
-			if (i >= weatherObjectsArray.size())
+			if (i >= weatherObjArray0.size())
 			{
 				break;
 			}
 
-			RuneLiteObject runeLiteObject = weatherObjectsArray.get(i);
+			RuneLiteObject runeLiteObject = weatherObjArray0.get(i);
 			runeLiteObject.setLocation(nextTile.getLocalLocation(), z);
 
 			if (currentWeather.isHasPrecipitation())
@@ -529,14 +535,14 @@ public class CyclesPlugin extends Plugin
 
 		if (currentWeather.isHasPrecipitation())
 		{
-			if (startRotation == maxObjects || startRotation >= weatherObjectsArray.size())
+			if (startRotation == maxObjects || startRotation >= weatherObjArray0.size())
 			{
 				weatherTransitioning = false;
 				startRotation = 0;
 				return;
 			}
 
-			relocateObjects(CHANGE_CONSTANT);
+			relocateObjects(objSpawnNum);
 		}
 		else
 		{
@@ -552,11 +558,11 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
-		if (!weatherObjectsArray.isEmpty())
+		if (!weatherObjArray0.isEmpty())
 		{
-			int size = weatherObjectsArray.size();
+			int size = weatherObjArray0.size();
 			clearWeatherObjects();
-			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjectsArray);
+			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjArray0);
 		}
 	}
 
@@ -626,6 +632,32 @@ public class CyclesPlugin extends Plugin
 			soundPlayer0.playClip(soundEffect, volume);
 			soundPlayer0.setFading(isFading);
 			soundPlayer0.setLoop(true);
+		}
+	}
+
+	public SoundPlayer getFreeSoundPlayer()
+	{
+		if (soundPlayer0.isPlaying())
+		{
+			if (soundPlayer1.isPlaying())
+			{
+				if (soundPlayer2.isPlaying())
+				{
+					return soundPlayer0;
+				}
+				else
+				{
+					return soundPlayer2;
+				}
+			}
+			else
+			{
+				return soundPlayer1;
+			}
+		}
+		else
+		{
+			return soundPlayer0;
 		}
 	}
 
@@ -727,6 +759,9 @@ public class CyclesPlugin extends Plugin
 			case RAIN:
 				currentWeather = Condition.WEATHER_RAINING;
 				break;
+			case SANDSTORM:
+				currentWeather = Condition.WEATHER_SANDSTORM;
+				break;
 			case SNOW:
 				currentWeather = Condition.WEATHER_SNOWING;
 				break;
@@ -737,6 +772,8 @@ public class CyclesPlugin extends Plugin
 				currentWeather = Condition.WEATHER_STORM;
 				break;
 		}
+
+		relocationNum = getMaxWeatherObjects(currentWeather) / 10;
 	}
 
 	public void loadModelsAnimations()
@@ -746,22 +783,28 @@ public class CyclesPlugin extends Plugin
 		short fogReplaceColour = JagexColor.packHSL(54, 0, 77);
 		fogModel = fogModelData.scale(64, 128, 64).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
-		ModelData ashModelData = client.loadModelData(ASH_MODEL).cloneColors();
+		ModelData ashModelData = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices().scale(128, 160, 128).translate(0, 180, 0);
 		short[] ashFaceColours = ashModelData.getFaceColors();
-		short[] ashReplaceColours = new short[384];
 		short ashColour1 = JagexColor.packHSL(39, 1, 40);
-		ashReplaceColours[0] = ashColour1;
 		short ashColour2 = JagexColor.packHSL(39, 1, 40);
-		ashReplaceColours[2] = ashColour2;
-		ashModel = client.loadModel(ASH_MODEL, ashFaceColours, ashReplaceColours);
+		ashModelData.recolor(ashFaceColours[0], ashColour1).recolor(ashFaceColours[2], ashColour2);
+		ashModel = ashModelData.scale(192, 256, 192).translate(0, 420, 0).light();
 
-		rainModel = client.loadModel(RAIN_MODEL);
-		snowModel = client.loadModel(SNOW_MODEL);
+		ModelData sandModelData = client.loadModelData(SAND_MODEL).cloneVertices();
+		sandModel = sandModelData.scale(256, 256, 256).light(ModelData.DEFAULT_AMBIENT, 1200, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+
+		ModelData snowModelData = client.loadModelData(SNOW_MODEL).cloneVertices();
+		snowModel = snowModelData.scale(128, 192, 128).translate(0, 190, 0).light();
+
+		ModelData rainModelData = client.loadModelData(RAIN_MODEL);
+		rainModel = rainModelData.light();
+
 		starModel = client.loadModel(STAR_MODEL);
 
 		ashAnimation = client.loadAnimation(ASH_ANIMATION);
 		fogAnimation = client.loadAnimation(FOG_ANIMATION);
 		rainAnimation = client.loadAnimation(RAIN_ANIMATION);
+		sandAnimation = client.loadAnimation(SAND_ANIMATION);
 		snowAnimation = client.loadAnimation(SNOW_ANIMATION);
 		starAnimation = client.loadAnimation(STAR_ANIMATION);
 	}
@@ -785,6 +828,9 @@ public class CyclesPlugin extends Plugin
 			case STORM:
 				weatherModel = rainModel;
 				break;
+			case SANDSTORM:
+				weatherModel = sandModel;
+				break;
 			case SNOW:
 				weatherModel = snowModel;
 				break;
@@ -805,6 +851,8 @@ public class CyclesPlugin extends Plugin
 				return starModel;
 			case WEATHER_FOGGY:
 				return fogModel;
+			case WEATHER_SANDSTORM:
+				return sandModel;
 			case WEATHER_SNOWING:
 				return snowModel;
 			case WEATHER_RAINING:
@@ -838,6 +886,9 @@ public class CyclesPlugin extends Plugin
 			case STORM:
 				weatherAnimation = rainAnimation;
 				break;
+			case SANDSTORM:
+				weatherAnimation = sandAnimation;
+				break;
 			case SNOW:
 				weatherAnimation = snowAnimation;
 				break;
@@ -858,6 +909,8 @@ public class CyclesPlugin extends Plugin
 				return starAnimation;
 			case WEATHER_FOGGY:
 				return fogAnimation;
+			case WEATHER_SANDSTORM:
+				return sandAnimation;
 			case WEATHER_SNOWING:
 				return snowAnimation;
 			case WEATHER_RAINING:
