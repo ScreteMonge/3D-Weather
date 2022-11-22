@@ -1,33 +1,22 @@
 package com.weather3d;
 
-import javax.inject.Inject;
-
 import jaco.mp3.player.MP3Player;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.client.callback.ClientThread;
 
 import java.net.URL;
 
+@Getter
+@Setter
 public class SoundPlayer
 {
-    @Inject
-    private CyclesConfig config;
-    @Inject
-    private ClientThread clientThread;
-
-    @Setter
-    @Getter
-    private boolean isFading = false;
-    @Setter
-    @Getter
-    private boolean loop = false;
-    @Getter
-    private SoundEffect savedSound;
+    private boolean trueFading = false;
+    private boolean loopFading = false;
+    private boolean primarySoundPlayer = false;
     private final MP3Player trackPlayer = new MP3Player();
     private Thread handlePlayThread = null;
 
-    public void playClip(SoundEffect soundEffect, int volume)
+    public void playClip(SoundEffect soundEffect)
     {
         trackPlayer.getPlayList().clear();
 
@@ -35,9 +24,7 @@ public class SoundPlayer
             try
             {
                 String soundLink = soundEffect.getSoundFile();
-                savedSound = soundEffect;
                 trackPlayer.addToPlayList(new URL(soundLink));
-                trackPlayer.setVolume(volume);
                 trackPlayer.play();
             }
             catch (Exception e)
@@ -47,12 +34,11 @@ public class SoundPlayer
         });
 
         handlePlayThread.start();
-
     }
 
     public void stopClip()
     {
-        trackPlayer.stop();
+        trackPlayer.pause();
     }
 
     public boolean isPlaying()
@@ -65,38 +51,20 @@ public class SoundPlayer
         return trackPlayer.getVolume();
     }
 
-    public int getEndVolume()
+    public void setVolumeLevel(int volume)
     {
-        double volDensity;
-        switch(config.weatherDensity())
+        if (volume < 0)
         {
-            case LOW:
-                volDensity = 0.25;
-                break;
-            default:
-            case MEDIUM:
-                volDensity = 0.5;
-                break;
-            case HIGH:
-                volDensity = 0.75;
-                break;
-            case EXTREME:
-                volDensity = 1;
-                break;
+            volume = 0;
+            System.out.println("Volume tried to be less than 0");
         }
 
-        double configVolume = config.ambientVolume();
-        int endVolume = (int) (configVolume * volDensity);
-        return endVolume;
-    }
-
-    public void setVolumeLevel(int volumeLevel)
-    {
-        if (volumeLevel < 0)
+        if (volume > 100)
         {
-            trackPlayer.setVolume(0);
-            return;
+            volume = 100;
+            System.out.println("Volume tried to be greater than 100");
         }
-        trackPlayer.setVolume(volumeLevel);
+
+        trackPlayer.setVolume(volume);
     }
 }

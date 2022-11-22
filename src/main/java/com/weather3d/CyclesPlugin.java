@@ -2,6 +2,7 @@ package com.weather3d;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.swing.*;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -38,20 +36,13 @@ public class CyclesPlugin extends Plugin
 	@Inject
 	private CyclesConfig config;
 	@Inject
+	private ConfigManager configManager;
+	@Inject
 	private OverlayManager overlayManager;
 	@Inject
 	private CyclesOverlay overlay;
-	@Inject
-	private SoundPlayer soundPlayer0 = new SoundPlayer();
-	@Inject
-	private SoundPlayer soundPlayer1 = new SoundPlayer();
-	@Inject
-	private SoundPlayer soundPlayer2 = new SoundPlayer();
 
-	private SoundPlayer[] soundPlayers = new SoundPlayer[3];
-
-
-	private ArrayList<RuneLiteObject> weatherObjArray0 = new ArrayList<>();
+	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
 	private Model ashModel;
 	private Model fogModel;
 	private Model rainModel;
@@ -78,24 +69,19 @@ public class CyclesPlugin extends Plugin
 	private final int STAR_ANIMATION = 7971;
 
 	private boolean loadedAnimsModels = false;
-	private int startRotation = 0;
-	private int objSpawnNum = 50;
-	private int relocationNum;
-	private static final ZoneId JAGEX = ZoneId.of("Europe/London");
-	private final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("DDD:hh:mm");
+	private boolean conditionsSynced = false;
+	private final Random random = new Random();
 	private int savedChunk = 0;
 	private int savedZPlane = -1;
-	private boolean conditionsSynced = false;
+	private int zoneObjRecovery = 0;
+	private final int WINTERTODT_CHUNK = 6462;
+	private final int OBJ_ROTATION_CONSTANT = 20;
 	@Getter
 	private Condition currentSeason = Condition.SEASON_SPRING;
 	@Getter
 	private Condition currentBiome = Condition.BIOME_GRASSLAND;
 	@Getter
-	private Condition currentWeather = null;
-	private boolean weatherTransitioning = false;
-	private boolean startWeatherTransition = false;
-	private final int VOL_CHANGE_CONSTANT = 2;
-
+	private Condition currentWeather;
 
 	@Override
 	protected void startUp() throws Exception
@@ -111,22 +97,15 @@ public class CyclesPlugin extends Plugin
 			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 			currentSeason = syncSeason();
 			setConfigWeather();
+			handleWeatherManagers();
 		}
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-		clientThread.invoke(this::clearWeatherObjects);
+		clientThread.invoke(this::clearAllWeatherManagers);
 		overlayManager.remove(overlay);
-		for (SoundPlayer soundPlayer : soundPlayers)
-		{
-			if (soundPlayer == null)
-			{
-				continue;
-			}
-			soundPlayer.stopClip();
-		}
 	}
 
 	@Subscribe
@@ -141,21 +120,17 @@ public class CyclesPlugin extends Plugin
 		if (!conditionsSynced)
 		{
 			setConfigWeather();
-			conditionsSynced = true;
+			if (currentWeather.isHasPrecipitation())
+			{
+				handleWeatherManagers();
+			}
 
-			soundPlayers[0] = soundPlayer0;
-			soundPlayers[1] = soundPlayer1;
-			soundPlayers[2] = soundPlayer2;
+			conditionsSynced = true;
 		}
 
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
-		}
-
-		if (savedZPlane == -1)
-		{
-			savedZPlane = client.getPlane();
 		}
 
 		if (config.weatherType() == CyclesConfig.WeatherType.DYNAMIC)
@@ -174,97 +149,32 @@ public class CyclesPlugin extends Plugin
 
 			if (nextWeather != currentWeather)
 			{
-				weatherTransitioning = true;
-				startWeatherTransition = true;
 				setConfigWeather();
-				handleAmbienceChanges();
+				handleWeatherManagers();
 			}
-
 			conditionsSynced = true;
 		}
+
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			if (weatherManager.isFading())
+			{
+				fadeWeatherManager(weatherManager);
+			}
+			else
+			{
+				handleWeatherChanges(weatherManager);
+			}
+
+			handleSoundChanges(weatherManager);
+		}
+
+		clearFadedWeatherManagers();
 
 		if (savedZPlane != client.getPlane())
 		{
 			transitionZPlane();
 			savedZPlane = client.getPlane();
-		}
-		else if (weatherTransitioning)
-		{
-			handleWeatherTransition();
-		}
-		else
-		{
-			handleWeatherChanges();
-		}
-
-		if (!config.toggleAmbience())
-		{
-			return;
-		}
-
-		// Accounts for random errors causing drops in sound, restarting sound after logging out and relogging back in or toggling Toggle Ambience on
-		if (currentWeather.isHasSound() && config.toggleAmbience() && config.ambientVolume() != 0)
-		{
-			boolean isPlaying = false;
-			for (SoundPlayer soundPlayer : soundPlayers)
-			{
-				if (soundPlayer.isPlaying())
-				{
-					isPlaying = true;
-				}
-			}
-
-			if (!isPlaying)
-			{
-				handleSoundPlayers(false, currentWeather.getSoundEffect(), 0);
-			}
-		}
-
-		for (SoundPlayer soundPlayer : soundPlayers)
-		{
-			if (!soundPlayer.isPlaying())
-			{
-				continue;
-			}
-
-			if (!currentWeather.isHasSound() || currentWeather.getSoundEffect() != soundPlayer.getSavedSound())
-			{
-				soundPlayer.setFading(true);
-			}
-
-			int ticks = client.getTickCount();
-
-			//Prevent soundplayers from starting before other things have been initialized, then be sure to loop them every 2 minutes or so/125 ticks
-			if (soundPlayer.isLoop() && ticks > 3 && ticks % 125 == 0)
-			{
-				if (soundPlayer.isFading())
-				{
-					handleSoundPlayers(true, soundPlayer.getSavedSound(), soundPlayer.getCurrentVolume());
-				}
-				else
-				{
-					//Start next loop at low volume for natural build up as last soundplayer regresses - except at low volumes, where the jump is too noticeable
-					int restartVolume = soundPlayer.getCurrentVolume() / 2;
-					if (soundPlayer.getCurrentVolume() < 10)
-					{
-						restartVolume = soundPlayer.getCurrentVolume();
-					}
-					handleSoundPlayers(false, soundPlayer.getSavedSound(), restartVolume);
-					break;
-				}
-			}
-		}
-
-		for (SoundPlayer soundPlayer : soundPlayers)
-		{
-			if (soundPlayer.isFading())
-			{
-				fadeVolume(soundPlayer);
-			}
-			else if (soundPlayer.getCurrentVolume() != soundPlayer.getEndVolume())
-			{
-				transitionVolume(soundPlayer);
-			}
 		}
 	}
 
@@ -274,14 +184,7 @@ public class CyclesPlugin extends Plugin
 		GameState gameState = event.getGameState();
 		if (gameState == GameState.LOGIN_SCREEN || gameState == GameState.LOGIN_SCREEN_AUTHENTICATOR || gameState == GameState.STARTING)
 		{
-			for (SoundPlayer soundPlayer : soundPlayers)
-			{
-				if (soundPlayer == null)
-				{
-					continue;
-				}
-				soundPlayer.stopClip();
-			}
+			clientThread.invoke(this::clearAllWeatherManagers);
 		}
 
 		if (gameState != GameState.LOGGED_IN)
@@ -293,21 +196,8 @@ public class CyclesPlugin extends Plugin
 		currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 		currentSeason = syncSeason();
 		setConfigWeather();
-
-		if (!currentWeather.isHasPrecipitation())
-		{
-			clearWeatherObjects();
-			return;
-		}
-
-		handleAmbienceChanges();
-
-		if (!weatherObjArray0.isEmpty())
-		{
-			int size = weatherObjArray0.size() / 2;
-			clearWeatherObjects();
-			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjArray0);
-		}
+		handleWeatherManagers();
+		handleZoneTransition();
 	}
 
 	@Subscribe
@@ -321,17 +211,51 @@ public class CyclesPlugin extends Plugin
 		if (event.getKey().equals("weatherType"))
 		{
 			setConfigWeather();
-			startRotation = 0;
-			weatherTransitioning = true;
-			startWeatherTransition = true;
-
-			handleAmbienceChanges();
+			handleWeatherManagers();
 			return;
 		}
 
 		if (event.getKey().equals("seasonType"))
 		{
 			currentSeason = syncSeason();
+			return;
+		}
+
+		if (event.getKey().equals("weatherDensity"))
+		{
+			System.out.println("WD change");
+			for (WeatherManager weatherManager : weatherManagerList)
+			{
+				Condition weatherType = weatherManager.getWeatherType();
+
+				if (weatherType.isHasPrecipitation())
+				{
+					ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+					clientThread.invoke(() -> {
+						while (array.size() > getMaxWeatherObjects(weatherType))
+						{
+							removeWeatherObject(0, array);
+						}
+					});
+				}
+
+				if (weatherType.isHasSound())
+				{
+					double volumeDouble = config.ambientVolume() * getWeatherDensityFactor();
+					int volumeMax = (int) volumeDouble;
+
+					for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
+					{
+						if (soundPlayer.getCurrentVolume() > volumeMax)
+						{
+							soundPlayer.setVolumeLevel(volumeMax);
+							System.out.println("Setting VolumeGoal for WD to: " + volumeMax);
+						}
+					}
+				}
+			}
+			return;
 		}
 
 		if (event.getKey().equals("toggleOverlay"))
@@ -343,92 +267,335 @@ public class CyclesPlugin extends Plugin
 			}
 
 			overlayManager.remove(overlay);
+			return;
 		}
 
 		if (event.getKey().equals("toggleAmbience"))
 		{
-			if (!config.toggleAmbience())
+			for (WeatherManager weatherManager : weatherManagerList)
 			{
-				for (SoundPlayer soundPlayer : soundPlayers)
+				if (weatherManager.getWeatherType().isHasSound())
 				{
-					soundPlayer.stopClip();
-					soundPlayer.setLoop(false);
+					if (config.toggleAmbience())
+					{
+						handleSoundChanges(weatherManager);
+						return;
+					}
+
+					weatherManager.stopManagerSoundPlayers();
 				}
 			}
+			return;
 		}
 
-		if (event.getKey().equals("ambientVolume"))
+		if (event.getKey().equals("enableFog"))
 		{
-			if (!config.toggleAmbience())
+			if (config.enableFog())
 			{
 				return;
 			}
 
-			for (SoundPlayer soundPlayer : soundPlayers)
+			for (WeatherManager weatherManager : weatherManagerList)
 			{
-				if (!soundPlayer.isPlaying())
+				if (weatherManager.getWeatherType() == Condition.WEATHER_FOGGY)
 				{
-					continue;
+					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
 				}
+			}
+			return;
+		}
 
-				if (soundPlayer.isFading())
+		if (event.getKey().equals("enableStars"))
+		{
+			if (config.enableStars())
+			{
+				return;
+			}
+
+			for (WeatherManager weatherManager : weatherManagerList)
+			{
+				if (weatherManager.getWeatherType() == Condition.WEATHER_COSMOS)
 				{
-					soundPlayer.stopClip();
-					continue;
+					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
+					clientThread.invoke(weatherManager::stopManagerSoundPlayers);
 				}
+			}
+			return;
+		}
 
-				int endVolume = soundPlayer.getEndVolume();
-				soundPlayer.setVolumeLevel(endVolume);
+		if (event.getKey().equals("enableWintertodtSnow"))
+		{
+			if (config.enableWintertodtSnow())
+			{
+				return;
+			}
+
+			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
+
+			if (playerChunk == WINTERTODT_CHUNK)
+			{
+				for (WeatherManager weatherManager : weatherManagerList)
+				{
+					if (weatherManager.getWeatherType() == Condition.WEATHER_SNOWING)
+					{
+						clientThread.invoke(() -> clearWeatherObjects(weatherManager));
+						clientThread.invoke(weatherManager::stopManagerSoundPlayers);
+					}
+				}
 			}
 		}
 	}
 
-	public void handleWeatherChanges()
+	public void handleWeatherManagers()
 	{
-		if (client.getTickCount() % 2 != 0)
+		boolean activeManager = false;
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			weatherManager.setFading(true);
+			if (weatherManager.getWeatherType() == currentWeather)
+			{
+				weatherManager.setFading(false);
+				activeManager = true;
+			}
+		}
+
+		if (!activeManager && currentWeather.isHasPrecipitation())
+		{
+			SwingUtilities.invokeLater(this::createWeatherManager);
+		}
+	}
+
+	public void handleSoundChanges(WeatherManager weatherManager)
+	{
+		Condition weatherCondition = weatherManager.getWeatherType();
+		if (!weatherCondition.isHasSound() || !config.toggleAmbience() || (weatherCondition == Condition.WEATHER_COSMOS && !config.enableStars()))
 		{
 			return;
 		}
 
-		if (currentWeather.isHasPrecipitation())
+		int soundTimer = weatherManager.getSoundPlayerTimer();
+		soundTimer++;
+		weatherManager.setSoundPlayerTimer(soundTimer);
+		SoundPlayer primarySoundPlayer = weatherManager.getPrimarySoundPlayer();
+
+		if (soundTimer == 230)
 		{
-			int maxObjects = getMaxWeatherObjects(currentWeather);
-			if (weatherObjArray0.size() < maxObjects)
+			weatherManager.setSoundPlayerTimer(0);
+			primarySoundPlayer.setLoopFading(true);
+			weatherManager.switchSoundPlayerPriority();
+		}
+
+		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
+
+		double volumeDouble = (weatherManager.getWeatherObjArray().size() / maxWeatherObjects) * config.ambientVolume() * getWeatherDensityFactor();
+		int volumeGoal = (int) volumeDouble;
+
+		int changeRate = config.ambientVolume() / 10;
+		if (changeRate < 1)
+		{
+			changeRate = 1;
+		}
+
+		SoundEffect soundEffect = weatherCondition.getSoundEffect();
+
+		for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
+		{
+			if (weatherCondition != currentWeather)
 			{
-				renderWeather(objSpawnNum, getConfigModel(), getConfigAnimation(), weatherObjArray0);
-			}
-			else if (weatherObjArray0.size() == maxObjects)
-			{
-				if (client.getTickCount() % currentWeather.getChangeRate() == 0)
+				soundPlayer.setTrueFading(true);
+				if (!soundPlayer.isPlaying())
 				{
-					relocateObjects(relocationNum);
-					if (startRotation > getMaxWeatherObjects(currentWeather))
-					{
-						startRotation = 0;
-					}
+					continue;
 				}
 			}
 			else
 			{
-				trimWeatherArray(maxObjects, maxObjects + objSpawnNum);
+				soundPlayer.setTrueFading(false);
 			}
 
-		}
-		else if (!weatherObjArray0.isEmpty())
-		{
-			trimWeatherArray(0, objSpawnNum);
+			if (!soundPlayer.isPlaying())
+			{
+				soundPlayer.setTrueFading(false);
+
+				if (soundPlayer == primarySoundPlayer)
+				{
+					System.out.println(soundPlayer.toString() + ": Starting clip");
+					soundPlayer.playClip(soundEffect);
+					soundPlayer.setVolumeLevel(volumeGoal / 2);
+				}
+				continue;
+			}
+
+			int currentVolume = soundPlayer.getCurrentVolume();
+
+			if (soundPlayer.isLoopFading() && !soundPlayer.isTrueFading())
+			{
+				int endVolume = currentVolume - changeRate;
+				if (endVolume < 1)
+				{
+					System.out.println(soundPlayer.toString() + ": stopping looping clip");
+					soundPlayer.stopClip();
+					soundPlayer.setLoopFading(false);
+					endVolume = 0;
+				}
+
+				System.out.println(soundPlayer.toString() + ": LoopFading to: " + endVolume);
+				soundPlayer.setVolumeLevel(endVolume);
+				continue;
+			}
+
+			if (soundPlayer.isTrueFading())
+			{
+				int endVolume = currentVolume - changeRate;
+				if (endVolume < volumeGoal && soundPlayer == primarySoundPlayer)
+				{
+					endVolume = volumeGoal;
+				}
+
+				if (endVolume < 1)
+				{
+					endVolume = 0;
+					System.out.println(soundPlayer.toString() + ": stopping Truefading clip");
+					soundPlayer.setLoopFading(false);
+					soundPlayer.stopClip();
+				}
+
+				System.out.println(soundPlayer.toString() + ": TrueFading to: " + endVolume);
+				soundPlayer.setVolumeLevel(endVolume);
+				continue;
+			}
+
+			int finalVolume = currentVolume + changeRate;
+			if (finalVolume > volumeGoal)
+			{
+					finalVolume = volumeGoal;
+			}
+
+			System.out.println(soundPlayer.toString() + ": Setting Vol to: " + finalVolume);
+			soundPlayer.setVolumeLevel(finalVolume);
 		}
 	}
 
-	public RuneLiteObject createWeatherObject(Model weatherModel, Animation weatherAnimation, LocalPoint lp, int z)
+	public double getWeatherDensityFactor()
 	{
-		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
-		runeLiteObject.setModel(weatherModel);
-		runeLiteObject.setAnimation(weatherAnimation);
-		runeLiteObject.setLocation(lp, z);
-		runeLiteObject.setShouldLoop(true);
-		runeLiteObject.setActive(true);
-		return runeLiteObject;
+		switch (config.weatherDensity())
+		{
+			case LOW:
+				return 0.5;
+			default:
+			case MEDIUM:
+				return 0.65;
+			case HIGH:
+				return 0.85;
+			case EXTREME:
+				return 1;
+		}
+	}
+
+	public void createWeatherManager()
+	{
+		SoundPlayer[] soundPlayers = new SoundPlayer[]{new SoundPlayer(), new SoundPlayer()};
+		WeatherManager weatherManager = new WeatherManager(currentWeather, soundPlayers, 0, new ArrayList<>(), 0, false);
+		weatherManagerList.add(weatherManager);
+	}
+
+	public void fadeWeatherManager(WeatherManager weatherManager)
+	{
+		int trimNumber = getMaxWeatherObjects(weatherManager.getWeatherType()) / OBJ_ROTATION_CONSTANT;
+		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+		if (trimNumber < array.size() / OBJ_ROTATION_CONSTANT)
+		{
+			trimNumber = array.size() / OBJ_ROTATION_CONSTANT;
+		}
+
+		if (trimNumber == 0)
+		{
+			trimNumber = 1;
+		}
+
+		trimWeatherArray(weatherManager, 0, trimNumber);
+	}
+
+	public void clearFadedWeatherManagers()
+	{
+		for (int i = 0; i < weatherManagerList.size(); i++)
+		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
+
+			if (weatherManager.isFading() && weatherManager.getWeatherObjArray().isEmpty())
+			{
+				boolean readyToRemove = true;
+
+				for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
+				{
+					if (soundPlayer.isPlaying())
+					{
+						readyToRemove = false;
+					}
+				}
+
+				if (readyToRemove)
+				{
+					weatherManagerList.remove(weatherManager);
+					i--;
+				}
+			}
+		}
+	}
+
+	public void clearAllWeatherManagers()
+	{
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+			clearWeatherObjects(weatherManager);
+			weatherManager.stopManagerSoundPlayers();
+		}
+
+		weatherManagerList.clear();
+	}
+
+	public void handleWeatherChanges(WeatherManager weatherManager)
+	{
+		Condition weather = weatherManager.getWeatherType();
+
+		if (weather == Condition.WEATHER_FOGGY && !config.enableFog())
+		{
+			return;
+		}
+
+		if (weather == Condition.WEATHER_COSMOS && !config.enableStars())
+		{
+			return;
+		}
+
+		if (!config.enableWintertodtSnow() && weather == Condition.WEATHER_SNOWING)
+		{
+			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
+			if (playerChunk == WINTERTODT_CHUNK)
+			{
+				return;
+			}
+		}
+
+		int maxWeatherObj = getMaxWeatherObjects(weather);
+		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+		if (array.size() < maxWeatherObj)
+		{
+			if (zoneObjRecovery > 0)
+			{
+				relocateObjects(weatherManager, maxWeatherObj / (OBJ_ROTATION_CONSTANT / 2));
+				zoneObjRecovery--;
+			}
+			renderWeather(maxWeatherObj / OBJ_ROTATION_CONSTANT, weatherManager);
+		}
+		else if (array.size() == maxWeatherObj && client.getTickCount() % weather.getChangeRate() == 0)
+		{
+			relocateObjects(weatherManager, maxWeatherObj / OBJ_ROTATION_CONSTANT);
+		}
 	}
 
 	public int getMaxWeatherObjects(Condition weatherCondition)
@@ -443,23 +610,43 @@ public class CyclesPlugin extends Plugin
 			case HIGH:
 				return weatherCondition.getObjHigh();
 			case EXTREME:
-				return weatherCondition.getObjHighest();
+				return weatherCondition.getObjExtreme();
 		}
 	}
 
-	private void renderWeather(int objects, Model weatherModel, Animation weatherAnimation, ArrayList<RuneLiteObject> weatherArray)
+	private void renderWeather(int objects, WeatherManager weatherManager)
 	{
 		ArrayList<Tile> availableTiles = getAvailableTiles();
 		int z = client.getPlane();
+		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+		Condition weatherCondition = weatherManager.getWeatherType();
+		Animation weatherAnimation = getWeatherAnimation(weatherCondition);
+		Model weatherModel = getWeatherModel(weatherCondition);
 
 		for (int i = 0; i < objects; i++)
 		{
-			int rollTile = (int) (Math.random() * availableTiles.size());
-			Tile openTile = availableTiles.get(rollTile);
+			int roll = random.nextInt(availableTiles.size());
+			Tile openTile = availableTiles.get(roll);
 
 			RuneLiteObject runeLiteObject = createWeatherObject(weatherModel, weatherAnimation, openTile.getLocalLocation(), z);
-			weatherArray.add(runeLiteObject);
+			array.add(runeLiteObject);
+			if (array.size() == getMaxWeatherObjects(weatherManager.getWeatherType()))
+			{
+				return;
+			}
 		}
+	}
+
+	public RuneLiteObject createWeatherObject(Model weatherModel, Animation weatherAnimation, LocalPoint lp, int z)
+	{
+		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
+		runeLiteObject.setModel(weatherModel);
+		runeLiteObject.setAnimation(weatherAnimation);
+		runeLiteObject.setLocation(lp, z);
+		runeLiteObject.setShouldLoop(true);
+		runeLiteObject.setActive(true);
+		return runeLiteObject;
 	}
 
 	public void removeWeatherObject(int index, ArrayList<RuneLiteObject> weatherArray)
@@ -468,85 +655,60 @@ public class CyclesPlugin extends Plugin
 		{
 			return;
 		}
+
 		RuneLiteObject runeLiteObject = weatherArray.get(index);
 		runeLiteObject.setActive(false);
 		weatherArray.remove(index);
 	}
 
-	public void clearWeatherObjects()
+	public void clearWeatherObjects(WeatherManager weatherManager)
 	{
-		for (RuneLiteObject runeLiteObject : weatherObjArray0)
+		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+
+		for (RuneLiteObject runeLiteObject : array)
 		{
 			runeLiteObject.setActive(false);
 		}
-		weatherObjArray0.clear();
+
+		array.clear();
 	}
 
-	public void trimWeatherArray(int start, int end)
+	public void trimWeatherArray(WeatherManager weatherManager, int start, int end)
 	{
 		for (int i = start; i < end; i++)
 		{
-			removeWeatherObject(start, weatherObjArray0);
+			removeWeatherObject(start, weatherManager.getWeatherObjArray());
 		}
 	}
 
-	public void relocateObjects(int numToRelocate)
+	public void relocateObjects(WeatherManager weatherManager, int numToRelocate)
 	{
 		int z = client.getPlane();
+		int beginRotation = weatherManager.getStartRotation();
+		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
 
-		for (int i = startRotation; i < startRotation + numToRelocate; i++)
+		for (int i = beginRotation; i < beginRotation + numToRelocate; i++)
 		{
 			ArrayList<Tile> availableTiles = getAvailableTiles();
-			Random random = new Random();
 			int roll = random.nextInt(availableTiles.size());
 			Tile nextTile = availableTiles.get(roll);
 
-			if (i >= weatherObjArray0.size())
+			if (i >= array.size())
 			{
 				break;
 			}
 
-			RuneLiteObject runeLiteObject = weatherObjArray0.get(i);
+			RuneLiteObject runeLiteObject = array.get(i);
 			runeLiteObject.setLocation(nextTile.getLocalLocation(), z);
-
-			if (currentWeather.isHasPrecipitation())
-			{
-				runeLiteObject.setAnimation(getConfigAnimation());
-				runeLiteObject.setModel(getConfigModel());
-			}
-		}
-		startRotation += numToRelocate;
-	}
-
-	public void handleWeatherTransition()
-	{
-		if (startWeatherTransition)
-		{
-			startRotation = 0;
-			startWeatherTransition = false;
+			runeLiteObject.setAnimation(getWeatherAnimation(weatherManager.getWeatherType()));
 		}
 
-		if (client.getTickCount() % 2 == 1)
+		weatherManager.setStartRotation(beginRotation + numToRelocate);
+		Condition weather = weatherManager.getWeatherType();
+		int maxWeatherObj = getMaxWeatherObjects(weather);
+		if (beginRotation > maxWeatherObj)
 		{
-			return;
-		}
-
-		int maxObjects = getMaxWeatherObjects(currentWeather);
-
-		if (currentWeather.isHasPrecipitation())
-		{
-			if (startRotation == maxObjects || startRotation >= weatherObjArray0.size())
-			{
-				weatherTransitioning = false;
-				startRotation = 0;
-				return;
-			}
-
-			relocateObjects(objSpawnNum);
-		}
-		else
-		{
-			weatherTransitioning = false;
+			weatherManager.setStartRotation(0);
 		}
 	}
 
@@ -554,15 +716,26 @@ public class CyclesPlugin extends Plugin
 	{
 		if (!currentWeather.isHasPrecipitation())
 		{
-			clearWeatherObjects();
+			clearAllWeatherManagers();
 			return;
 		}
 
-		if (!weatherObjArray0.isEmpty())
+		handleZoneTransition();
+	}
+
+	public void handleZoneTransition()
+	{
+		for (WeatherManager weatherManager : weatherManagerList)
 		{
-			int size = weatherObjArray0.size();
-			clearWeatherObjects();
-			renderWeather(size, getConfigModel(), getConfigAnimation(), weatherObjArray0);
+			Condition weatherType = weatherManager.getWeatherType();
+			ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+			int size = (int) (array.size() * 0.8);
+			clearWeatherObjects(weatherManager);
+			if (weatherType == currentWeather)
+			{
+				renderWeather(size, weatherManager);
+				zoneObjRecovery = 4;
+			}
 		}
 	}
 
@@ -599,146 +772,6 @@ public class CyclesPlugin extends Plugin
 		return availableTiles;
 	}
 
-	public void handleSoundPlayers(boolean isFading, SoundEffect soundEffect, int volume)
-	{
-		fadeSoundPlayers();
-
-		if (soundPlayer0.isPlaying())
-		{
-			if (soundPlayer1.isPlaying())
-			{
-				if (soundPlayer2.isPlaying())
-				{
-					soundPlayer0.playClip(soundEffect, volume);
-					soundPlayer0.setFading(isFading);
-					soundPlayer0.setLoop(true);
-				}
-				else
-				{
-					soundPlayer2.playClip(soundEffect, volume);
-					soundPlayer2.setFading(isFading);
-					soundPlayer2.setLoop(true);
-				}
-			}
-			else
-			{
-				soundPlayer1.playClip(soundEffect, volume);
-				soundPlayer1.setFading(isFading);
-				soundPlayer1.setLoop(true);
-			}
-		}
-		else
-		{
-			soundPlayer0.playClip(soundEffect, volume);
-			soundPlayer0.setFading(isFading);
-			soundPlayer0.setLoop(true);
-		}
-	}
-
-	public SoundPlayer getFreeSoundPlayer()
-	{
-		if (soundPlayer0.isPlaying())
-		{
-			if (soundPlayer1.isPlaying())
-			{
-				if (soundPlayer2.isPlaying())
-				{
-					return soundPlayer0;
-				}
-				else
-				{
-					return soundPlayer2;
-				}
-			}
-			else
-			{
-				return soundPlayer1;
-			}
-		}
-		else
-		{
-			return soundPlayer0;
-		}
-	}
-
-	public void handleAmbienceChanges()
-	{
-		if (!config.toggleAmbience())
-		{
-			return;
-		}
-
-		if (!currentWeather.isHasSound())
-		{
-			fadeSoundPlayers();
-			return;
-		}
-
-		handleSoundPlayers(false, currentWeather.getSoundEffect(), 0);
-	}
-
-	public void fadeSoundPlayers()
-	{
-		if (!conditionsSynced)
-		{
-			return;
-		}
-
-		for (SoundPlayer soundPlayer : soundPlayers)
-		{
-			soundPlayer.setFading(true);
-		}
-	}
-
-	public void transitionVolume(SoundPlayer soundPlayer)
-	{
-		if (!soundPlayer.isPlaying())
-		{
-			return;
-		}
-
-		int currentVol = soundPlayer.getCurrentVolume();
-		int endVol = soundPlayer.getEndVolume();
-		int change = endVol - currentVol;
-
-		if (change == 0)
-		{
-			return;
-		}
-
-		if (change > 1)
-		{
-			soundPlayer.setVolumeLevel(currentVol + VOL_CHANGE_CONSTANT);
-		}
-		else if (change == 1)
-		{
-			soundPlayer.setVolumeLevel(currentVol + 1);
-		}
-		else if (change < -1)
-		{
-			soundPlayer.setVolumeLevel(currentVol - VOL_CHANGE_CONSTANT);
-		}
-		else
-		{
-			soundPlayer.setVolumeLevel(currentVol - 1);
-		}
-	}
-
-	public void fadeVolume(SoundPlayer soundPlayer)
-	{
-		int currentVol = soundPlayer.getCurrentVolume();
-
-		if (currentVol == 0)
-		{
-			soundPlayer.stopClip();
-			soundPlayer.setFading(false);
-			soundPlayer.setLoop(false);
-			return;
-		}
-
-		soundPlayer.setVolumeLevel(currentVol - VOL_CHANGE_CONSTANT);
-	}
-
 	public void setConfigWeather()
 	{
 		switch(config.weatherType())
@@ -772,8 +805,6 @@ public class CyclesPlugin extends Plugin
 				currentWeather = Condition.WEATHER_STORM;
 				break;
 		}
-
-		relocationNum = getMaxWeatherObjects(currentWeather) / 10;
 	}
 
 	public void loadModelsAnimations()
@@ -809,39 +840,7 @@ public class CyclesPlugin extends Plugin
 		starAnimation = client.loadAnimation(STAR_ANIMATION);
 	}
 
-	public Model getConfigModel()
-	{
-		Model weatherModel;
-		switch (config.weatherType())
-		{
-			default:
-			case DYNAMIC:
-				weatherModel = getDynamicWeatherModel(currentWeather);
-				break;
-			case ASHFALL:
-				weatherModel = ashModel;
-				break;
-			case FOG:
-				weatherModel = fogModel;
-				break;
-			case RAIN:
-			case STORM:
-				weatherModel = rainModel;
-				break;
-			case SANDSTORM:
-				weatherModel = sandModel;
-				break;
-			case SNOW:
-				weatherModel = snowModel;
-				break;
-			case STARS:
-				weatherModel = starModel;
-				break;
-		}
-		return weatherModel;
-	}
-
-	private Model getDynamicWeatherModel(Condition currentWeather)
+	private Model getWeatherModel(Condition currentWeather)
 	{
 		switch (currentWeather)
 		{
@@ -867,39 +866,7 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
-	public Animation getConfigAnimation()
-	{
-		Animation weatherAnimation;
-		switch (config.weatherType())
-		{
-			default:
-			case DYNAMIC:
-				weatherAnimation = getDynamicWeatherAnimation(currentWeather);
-				break;
-			case ASHFALL:
-				weatherAnimation = ashAnimation;
-				break;
-			case FOG:
-				weatherAnimation = fogAnimation;
-				break;
-			case RAIN:
-			case STORM:
-				weatherAnimation = rainAnimation;
-				break;
-			case SANDSTORM:
-				weatherAnimation = sandAnimation;
-				break;
-			case SNOW:
-				weatherAnimation = snowAnimation;
-				break;
-			case STARS:
-				weatherAnimation = starAnimation;
-				break;
-		}
-		return weatherAnimation;
-	}
-
-	private Animation getDynamicWeatherAnimation(Condition currentWeather)
+	private Animation getWeatherAnimation(Condition currentWeather)
 	{
 		switch (currentWeather)
 		{
@@ -927,7 +894,7 @@ public class CyclesPlugin extends Plugin
 
 	private Condition syncWeather(Condition seasonCondition, Condition biomeCondition)
 	{
-		int totalMin = getTimeHours() * 60 + getTimeMinutes();
+		int totalMin = CyclesClock.getTimeHours() * 60 + CyclesClock.getTimeMinutes();
 		int cycleSegment = (totalMin / 15) % 12;
 		for (WeatherForecast forecast : WeatherForecast.values())
 		{
@@ -945,7 +912,7 @@ public class CyclesPlugin extends Plugin
 		{
 			default:
 			case DYNAMIC:
-				switch ((getTimeDays() / 7) % 4)
+				switch ((CyclesClock.getTimeDays() / 7) % 4)
 				{
 					default:
 					case 0:
@@ -966,33 +933,6 @@ public class CyclesPlugin extends Plugin
 			case WINTER:
 				return Condition.SEASON_WINTER;
 		}
-	}
-
-	private int getTimeMinutes()
-	{
-		String currentTime = getJagexTime();
-		String[] currentTimeArray = currentTime.split(":");
-		return Integer.valueOf(currentTimeArray[2]);
-	}
-
-	private int getTimeHours()
-	{
-		String currentTime = getJagexTime();
-		String[] currentTimeArray = currentTime.split(":");
-		return Integer.valueOf(currentTimeArray[1]);
-	}
-
-	private int getTimeDays()
-	{
-		String currentTime = getJagexTime();
-		String[] currentTimeArray = currentTime.split(":");
-		return Integer.valueOf(currentTimeArray[0]);
-	}
-
-	public String getJagexTime()
-	{
-		LocalDateTime time = LocalDateTime.now(JAGEX);
-		return time.format(TIME_FORMAT);
 	}
 
 	@Provides

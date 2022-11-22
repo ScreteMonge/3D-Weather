@@ -11,6 +11,7 @@ public interface CyclesConfig extends Config {
 		CLEAR,
 		FOG,
 		RAIN,
+		SANDSTORM,
 		SNOW,
 		STARS,
 		STORM
@@ -99,4 +100,36 @@ public interface CyclesConfig extends Config {
 		return 50;
 	}
 
+	@ConfigItem(
+			keyName = "enableFog",
+			name = "Enable Fog",
+			description = "Allows Fog objects to appear while Foggy",
+			position = 7
+	)
+	default boolean enableFog()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "enableStars",
+			name = "Enable Stars",
+			description = "Allows Star objects to appear while in other Realms",
+			position = 8
+	)
+	default boolean enableStars()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "enableWintertodtSnow",
+			name = "Enable Wintertodt Snow",
+			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
+			position = 9
+	)
+	default boolean enableWintertodtSnow()
+	{
+		return false;
+	}
 }
