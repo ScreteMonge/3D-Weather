@@ -11,7 +11,6 @@ public interface CyclesConfig extends Config {
 		CLEAR,
 		FOG,
 		RAIN,
-		SANDSTORM,
 		SNOW,
 		STARS,
 		STORM
@@ -129,6 +128,17 @@ public interface CyclesConfig extends Config {
 			position = 9
 	)
 	default boolean enableWintertodtSnow()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "enableLightning",
+			name = "Enable Lightning",
+			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
+			position = 10
+	)
+	default boolean enableLightning()
 	{
 		return false;
 	}

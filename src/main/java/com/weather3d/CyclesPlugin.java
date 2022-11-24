@@ -36,11 +36,11 @@ public class CyclesPlugin extends Plugin
 	@Inject
 	private CyclesConfig config;
 	@Inject
-	private ConfigManager configManager;
-	@Inject
 	private OverlayManager overlayManager;
 	@Inject
-	private CyclesOverlay overlay;
+	private CyclesOverlay cyclesOverlay;
+	@Inject
+	private LightningOverlay lightningOverlay;
 
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
 	private Model ashModel;
@@ -49,6 +49,7 @@ public class CyclesPlugin extends Plugin
 	private Model sandModel;
 	private Model snowModel;
 	private Model starModel;
+	private Model stormModel;
 	private Animation ashAnimation;
 	private Animation fogAnimation;
 	private Animation rainAnimation;
@@ -70,6 +71,7 @@ public class CyclesPlugin extends Plugin
 
 	private boolean loadedAnimsModels = false;
 	private boolean conditionsSynced = false;
+	public boolean flashLightning = false;
 	private final Random random = new Random();
 	private int savedChunk = 0;
 	private int savedZPlane = -1;
@@ -88,7 +90,8 @@ public class CyclesPlugin extends Plugin
 	{
 		if (config.toggleOverlay())
 		{
-			overlayManager.add(overlay);
+			overlayManager.add(cyclesOverlay);
+			overlayManager.add(lightningOverlay);
 		}
 
 		if (client.getLocalPlayer() != null)
@@ -105,7 +108,8 @@ public class CyclesPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		clientThread.invoke(this::clearAllWeatherManagers);
-		overlayManager.remove(overlay);
+		overlayManager.remove(cyclesOverlay);
+		overlayManager.remove(lightningOverlay);
 	}
 
 	@Subscribe
@@ -185,6 +189,7 @@ public class CyclesPlugin extends Plugin
 		if (gameState == GameState.LOGIN_SCREEN || gameState == GameState.LOGIN_SCREEN_AUTHENTICATOR || gameState == GameState.STARTING)
 		{
 			clientThread.invoke(this::clearAllWeatherManagers);
+			return;
 		}
 
 		if (gameState != GameState.LOGGED_IN)
@@ -203,6 +208,11 @@ public class CyclesPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
+		if (!event.getGroup().equals("3Dweather"))
+		{
+			return;
+		}
+
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
@@ -223,7 +233,6 @@ public class CyclesPlugin extends Plugin
 
 		if (event.getKey().equals("weatherDensity"))
 		{
-			System.out.println("WD change");
 			for (WeatherManager weatherManager : weatherManagerList)
 			{
 				Condition weatherType = weatherManager.getWeatherType();
@@ -250,7 +259,6 @@ public class CyclesPlugin extends Plugin
 						if (soundPlayer.getCurrentVolume() > volumeMax)
 						{
 							soundPlayer.setVolumeLevel(volumeMax);
-							System.out.println("Setting VolumeGoal for WD to: " + volumeMax);
 						}
 					}
 				}
@@ -262,11 +270,11 @@ public class CyclesPlugin extends Plugin
 		{
 			if (config.toggleOverlay())
 			{
-				overlayManager.add(overlay);
+				overlayManager.add(cyclesOverlay);
 				return;
 			}
 
-			overlayManager.remove(overlay);
+			overlayManager.remove(cyclesOverlay);
 			return;
 		}
 
@@ -368,6 +376,7 @@ public class CyclesPlugin extends Plugin
 	public void handleSoundChanges(WeatherManager weatherManager)
 	{
 		Condition weatherCondition = weatherManager.getWeatherType();
+
 		if (!weatherCondition.isHasSound() || !config.toggleAmbience() || (weatherCondition == Condition.WEATHER_COSMOS && !config.enableStars()))
 		{
 			return;
@@ -383,6 +392,11 @@ public class CyclesPlugin extends Plugin
 			weatherManager.setSoundPlayerTimer(0);
 			primarySoundPlayer.setLoopFading(true);
 			weatherManager.switchSoundPlayerPriority();
+		}
+
+		if (weatherCondition == Condition.WEATHER_STORM && (soundTimer == 90 || soundTimer == 138))
+		{
+			flashLightning = true;
 		}
 
 		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
@@ -419,7 +433,6 @@ public class CyclesPlugin extends Plugin
 
 				if (soundPlayer == primarySoundPlayer)
 				{
-					System.out.println(soundPlayer.toString() + ": Starting clip");
 					soundPlayer.playClip(soundEffect);
 					soundPlayer.setVolumeLevel(volumeGoal / 2);
 				}
@@ -433,13 +446,10 @@ public class CyclesPlugin extends Plugin
 				int endVolume = currentVolume - changeRate;
 				if (endVolume < 1)
 				{
-					System.out.println(soundPlayer.toString() + ": stopping looping clip");
 					soundPlayer.stopClip();
 					soundPlayer.setLoopFading(false);
 					endVolume = 0;
 				}
-
-				System.out.println(soundPlayer.toString() + ": LoopFading to: " + endVolume);
 				soundPlayer.setVolumeLevel(endVolume);
 				continue;
 			}
@@ -455,12 +465,10 @@ public class CyclesPlugin extends Plugin
 				if (endVolume < 1)
 				{
 					endVolume = 0;
-					System.out.println(soundPlayer.toString() + ": stopping Truefading clip");
 					soundPlayer.setLoopFading(false);
 					soundPlayer.stopClip();
 				}
 
-				System.out.println(soundPlayer.toString() + ": TrueFading to: " + endVolume);
 				soundPlayer.setVolumeLevel(endVolume);
 				continue;
 			}
@@ -471,7 +479,6 @@ public class CyclesPlugin extends Plugin
 					finalVolume = volumeGoal;
 			}
 
-			System.out.println(soundPlayer.toString() + ": Setting Vol to: " + finalVolume);
 			soundPlayer.setVolumeLevel(finalVolume);
 		}
 	}
@@ -548,12 +555,9 @@ public class CyclesPlugin extends Plugin
 	{
 		for (WeatherManager weatherManager : weatherManagerList)
 		{
-			ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
-
 			clearWeatherObjects(weatherManager);
 			weatherManager.stopManagerSoundPlayers();
 		}
-
 		weatherManagerList.clear();
 	}
 
@@ -686,6 +690,7 @@ public class CyclesPlugin extends Plugin
 		int z = client.getPlane();
 		int beginRotation = weatherManager.getStartRotation();
 		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		Condition weather = weatherManager.getWeatherType();
 
 		for (int i = beginRotation; i < beginRotation + numToRelocate; i++)
 		{
@@ -700,11 +705,11 @@ public class CyclesPlugin extends Plugin
 
 			RuneLiteObject runeLiteObject = array.get(i);
 			runeLiteObject.setLocation(nextTile.getLocalLocation(), z);
-			runeLiteObject.setAnimation(getWeatherAnimation(weatherManager.getWeatherType()));
+			runeLiteObject.setAnimation(getWeatherAnimation(weather));
 		}
 
 		weatherManager.setStartRotation(beginRotation + numToRelocate);
-		Condition weather = weatherManager.getWeatherType();
+
 		int maxWeatherObj = getMaxWeatherObjects(weather);
 		if (beginRotation > maxWeatherObj)
 		{
@@ -792,9 +797,6 @@ public class CyclesPlugin extends Plugin
 			case RAIN:
 				currentWeather = Condition.WEATHER_RAINING;
 				break;
-			case SANDSTORM:
-				currentWeather = Condition.WEATHER_SANDSTORM;
-				break;
 			case SNOW:
 				currentWeather = Condition.WEATHER_SNOWING;
 				break;
@@ -827,8 +829,19 @@ public class CyclesPlugin extends Plugin
 		ModelData snowModelData = client.loadModelData(SNOW_MODEL).cloneVertices();
 		snowModel = snowModelData.scale(128, 192, 128).translate(0, 190, 0).light();
 
-		ModelData rainModelData = client.loadModelData(RAIN_MODEL);
-		rainModel = rainModelData.light();
+		ModelData rainModelData = client.loadModelData(RAIN_MODEL).cloneVertices();
+		short[] rainFaceColours = rainModelData.getFaceColors();
+		short rainRippleColour = JagexColor.packHSL(32, 0, 110);
+		short rainDropColour = JagexColor.packHSL(32, 1, 120);
+		rainModelData.recolor(rainFaceColours[0], rainRippleColour).recolor(rainFaceColours[23], rainDropColour);
+		rainModel = rainModelData.scale(105, 256, 105).light();
+
+		ModelData stormModelData = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
+		short[] stormFaceColours = stormModelData.getFaceColors();
+		short stormRippleColour = JagexColor.packHSL(38, 0, 105);
+		short stormDropColour = JagexColor.packHSL(38, 2, 95);
+		stormModelData.recolor(stormFaceColours[0], stormRippleColour).recolor(stormFaceColours[23], stormDropColour);
+		stormModel = stormModelData.scale(115, 384, 115).light();
 
 		starModel = client.loadModel(STAR_MODEL);
 
@@ -855,8 +868,9 @@ public class CyclesPlugin extends Plugin
 			case WEATHER_SNOWING:
 				return snowModel;
 			case WEATHER_RAINING:
-			case WEATHER_STORM:
 				return rainModel;
+			case WEATHER_STORM:
+				return stormModel;
 			default:
 			case WEATHER_CLOUDY:
 			case WEATHER_COVERED:
