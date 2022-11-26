@@ -42,7 +42,6 @@ public class CyclesOverlay extends OverlayPanel
         panelComponent.setBackgroundColor(new Color(0, 0, 0, 0));
         graphics.setFont(RUNESCAPE_SMALL_FONT);
 
-        // return if conditions haven't been instantiated
         if (currentWeather == null || currentBiome == null || currentSeason == null)
         {
             return super.render(graphics);

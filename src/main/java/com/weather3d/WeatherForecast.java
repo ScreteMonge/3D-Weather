@@ -12,7 +12,7 @@ public enum WeatherForecast {
     SPRING_COSMOS(Condition.SEASON_SPRING, Condition.BIOME_COSMOS, new Condition[]
             {Condition.WEATHER_COSMOS, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_COSMOS, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY}),
     SPRING_DESERT(Condition.SEASON_SPRING, Condition.BIOME_DESERT, new Condition[]
-            {Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_RAINING, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY}),
+            {Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY}),
     SPRING_FOREST(Condition.SEASON_SPRING, Condition.BIOME_FOREST, new Condition[]
             {Condition.WEATHER_SUNNY, Condition.WEATHER_FOGGY, Condition.WEATHER_RAINING, Condition.WEATHER_RAINING, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_RAINING, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_CLOUDY, Condition.WEATHER_RAINING, Condition.WEATHER_STORM, Condition.WEATHER_CLOUDY}),
     SPRING_GRASSLAND(Condition.SEASON_SPRING, Condition.BIOME_GRASSLAND, new Condition[]
@@ -62,7 +62,7 @@ public enum WeatherForecast {
     AUTUMN_COSMOS(Condition.SEASON_AUTUMN, Condition.BIOME_COSMOS, new Condition[]
             {Condition.WEATHER_COSMOS, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_COSMOS, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY}),
     AUTUMN_DESERT(Condition.SEASON_AUTUMN, Condition.BIOME_DESERT, new Condition[]
-            {Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_RAINING, Condition.WEATHER_SUNNY}),
+            {Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_SUNNY, Condition.WEATHER_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY}),
     AUTUMN_FOREST(Condition.SEASON_AUTUMN, Condition.BIOME_FOREST, new Condition[]
             {Condition.WEATHER_RAINING, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_FOGGY, Condition.WEATHER_RAINING, Condition.WEATHER_FOGGY, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_SUNNY, Condition.WEATHER_CLOUDY, Condition.WEATHER_RAINING, Condition.WEATHER_PARTLY_CLOUDY, Condition.WEATHER_FOGGY, Condition.WEATHER_SUNNY}),
     AUTUMN_GRASSLAND(Condition.SEASON_AUTUMN, Condition.BIOME_GRASSLAND, new Condition[]

@@ -44,13 +44,30 @@ public class CyclesPlugin extends Plugin
 
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
 	private Model ashModel;
+	private Model ashModel2;
+	private Model ashModel3;
+	private Model cloudModel;
+	private Model cloudModel2;
+	private Model cloudModel3;
 	private Model fogModel;
+	private Model partlyCloudyModel;
+	private Model partlyCloudyModel2;
+	private Model partlyCloudyModel3;
 	private Model rainModel;
+	private Model rainModel2;
+	private Model rainModel3;
 	private Model sandModel;
 	private Model snowModel;
+	private Model snowModel2;
+	private Model snowModel3;
 	private Model starModel;
+	private Model starModel2;
+	private Model starModel3;
 	private Model stormModel;
+	private Model stormModel2;
+	private Model stormModel3;
 	private Animation ashAnimation;
+	private Animation cloudAnimation;
 	private Animation fogAnimation;
 	private Animation rainAnimation;
 	private Animation sandAnimation;
@@ -58,6 +75,8 @@ public class CyclesPlugin extends Plugin
 	private Animation starAnimation;
 	private final int ASH_MODEL = 27835;
 	private final int ASH_ANIMATION = 7000;
+	private final int CLOUD_MODEL = 4086;
+	private final int CLOUD_ANIMATION = 6470;
 	private final int FOG_MODEL = 29290;
 	private final int FOG_ANIMATION = 4516;
 	private final int RAIN_MODEL = 15524;
@@ -97,8 +116,8 @@ public class CyclesPlugin extends Plugin
 		if (client.getLocalPlayer() != null)
 		{
 			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
-			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
-			currentSeason = syncSeason();
+			syncBiome();
+			syncSeason();
 			setConfigWeather();
 			handleWeatherManagers();
 		}
@@ -139,16 +158,8 @@ public class CyclesPlugin extends Plugin
 
 		if (config.weatherType() == CyclesConfig.WeatherType.DYNAMIC)
 		{
-			WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
-
-			int playerChunk = wp.getRegionID();
-			if (savedChunk != playerChunk)
-			{
-				currentBiome = BiomeChunkMap.checkBiome(playerChunk);
-				savedChunk = playerChunk;
-			}
-
-			currentSeason = syncSeason();
+			syncBiome();
+			syncSeason();
 			Condition nextWeather = syncWeather(currentSeason, currentBiome);
 
 			if (nextWeather != currentWeather)
@@ -197,9 +208,8 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
-		int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
-		currentBiome = BiomeChunkMap.checkBiome(playerChunk);
-		currentSeason = syncSeason();
+		syncBiome();
+		syncSeason();
 		setConfigWeather();
 		handleWeatherManagers();
 		handleZoneTransition();
@@ -225,9 +235,22 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
+		if (event.getKey().equals("disableWeatherUnderground"))
+		{
+			if (!config.disableWeatherUnderground())
+			{
+				return;
+			}
+
+			if (currentBiome == Condition.BIOME_CAVE || currentBiome == Condition.BIOME_LAVA_CAVE)
+			{
+				clientThread.invoke(this::clearAllWeatherManagers);
+			}
+		}
+
 		if (event.getKey().equals("seasonType"))
 		{
-			currentSeason = syncSeason();
+			syncSeason();
 			return;
 		}
 
@@ -291,6 +314,23 @@ public class CyclesPlugin extends Plugin
 					}
 
 					weatherManager.stopManagerSoundPlayers();
+				}
+			}
+			return;
+		}
+
+		if (event.getKey().equals("enableClouds"))
+		{
+			if (config.enableClouds())
+			{
+				return;
+			}
+
+			for (WeatherManager weatherManager : weatherManagerList)
+			{
+				if (weatherManager.getWeatherType() == Condition.WEATHER_CLOUDY || weatherManager.getWeatherType() == Condition.WEATHER_PARTLY_CLOUDY)
+				{
+					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
 				}
 			}
 			return;
@@ -377,7 +417,12 @@ public class CyclesPlugin extends Plugin
 	{
 		Condition weatherCondition = weatherManager.getWeatherType();
 
-		if (!weatherCondition.isHasSound() || !config.toggleAmbience() || (weatherCondition == Condition.WEATHER_COSMOS && !config.enableStars()))
+		if (!weatherCondition.isHasSound() || !config.toggleAmbience())
+		{
+			return;
+		}
+
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Condition.BIOME_CAVE || currentBiome == Condition.BIOME_LAVA_CAVE))
 		{
 			return;
 		}
@@ -565,6 +610,16 @@ public class CyclesPlugin extends Plugin
 	{
 		Condition weather = weatherManager.getWeatherType();
 
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Condition.BIOME_CAVE || currentBiome == Condition.BIOME_LAVA_CAVE))
+		{
+			return;
+		}
+
+		if ((weather == Condition.WEATHER_CLOUDY || weather == Condition.WEATHER_PARTLY_CLOUDY) && !config.enableClouds())
+		{
+			return;
+		}
+
 		if (weather == Condition.WEATHER_FOGGY && !config.enableFog())
 		{
 			return;
@@ -626,12 +681,19 @@ public class CyclesPlugin extends Plugin
 
 		Condition weatherCondition = weatherManager.getWeatherType();
 		Animation weatherAnimation = getWeatherAnimation(weatherCondition);
-		Model weatherModel = getWeatherModel(weatherCondition);
+		int alternate = 1;
 
 		for (int i = 0; i < objects; i++)
 		{
 			int roll = random.nextInt(availableTiles.size());
 			Tile openTile = availableTiles.get(roll);
+
+			Model weatherModel = getWeatherModel(weatherCondition, alternate);
+			alternate += 1;
+			if (alternate > weatherCondition.getModelVariety())
+			{
+				alternate = 1;
+			}
 
 			RuneLiteObject runeLiteObject = createWeatherObject(weatherModel, weatherAnimation, openTile.getLocalLocation(), z);
 			array.add(runeLiteObject);
@@ -730,6 +792,12 @@ public class CyclesPlugin extends Plugin
 
 	public void handleZoneTransition()
 	{
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Condition.BIOME_CAVE || currentBiome == Condition.BIOME_LAVA_CAVE))
+		{
+			clientThread.invoke(this::clearAllWeatherManagers);
+			return;
+		}
+
 		for (WeatherManager weatherManager : weatherManagerList)
 		{
 			Condition weatherType = weatherManager.getWeatherType();
@@ -788,22 +856,28 @@ public class CyclesPlugin extends Plugin
 			case DYNAMIC:
 				currentWeather = syncWeather(currentSeason, currentBiome);
 				break;
+			case CLOUDY:
+				currentWeather = Condition.WEATHER_CLOUDY;
+				break;
 			case CLEAR:
 				currentWeather = Condition.WEATHER_SUNNY;
 				break;
-			case FOG:
+			case FOGGY:
 				currentWeather = Condition.WEATHER_FOGGY;
 				break;
-			case RAIN:
+			case PARTLY_CLOUDY:
+				currentWeather = Condition.WEATHER_PARTLY_CLOUDY;
+				break;
+			case RAINY:
 				currentWeather = Condition.WEATHER_RAINING;
 				break;
-			case SNOW:
+			case SNOWY:
 				currentWeather = Condition.WEATHER_SNOWING;
 				break;
-			case STARS:
+			case STARRY:
 				currentWeather = Condition.WEATHER_COSMOS;
 				break;
-			case STORM:
+			case STORMY:
 				currentWeather = Condition.WEATHER_STORM;
 				break;
 		}
@@ -811,41 +885,89 @@ public class CyclesPlugin extends Plugin
 
 	public void loadModelsAnimations()
 	{
+		ModelData ashModelData = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
+		ModelData ashModelData2 = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
+		ModelData ashModelData3 = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
+		short[] ashFaceColours = ashModelData.getFaceColors();
+		short[] ashFaceColours2 = ashModelData2.getFaceColors();
+		short[] ashFaceColours3 = ashModelData3.getFaceColors();
+		short ashColour1 = JagexColor.packHSL(39, 1, 40);
+		short ashColour2 = JagexColor.packHSL(39, 1, 40);
+		ashModel = ashModelData.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours[0], ashColour1).recolor(ashFaceColours[2], ashColour2).light();
+		ashModel2 = ashModelData2.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours2[0], ashColour1).recolor(ashFaceColours2[2], ashColour2).rotateY90Ccw().light();
+		ashModel3 = ashModelData3.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours3[0], ashColour1).recolor(ashFaceColours3[2], ashColour2).rotateY270Ccw().light();
+
+		ModelData cloudModelData = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		ModelData cloudModelData2 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		ModelData cloudModelData3 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		short cloudFaceColour = cloudModelData.getFaceColors()[0];
+		short cloudReplaceColour = JagexColor.packHSL(54, 0, 90);
+		cloudModel = cloudModelData.scale(90, 90, 90).translate(0, -800, 0).recolor(cloudFaceColour, cloudReplaceColour).light();
+		cloudModel2 = cloudModelData2.scale(100, 100, 100).translate(0, -900, 0).recolor(cloudFaceColour, cloudReplaceColour).rotateY90Ccw().light();
+		cloudModel3 = cloudModelData3.scale(80, 80, 80).translate(0, -700, 0).recolor(cloudFaceColour, cloudReplaceColour).rotateY180Ccw().light();
+
+		ModelData partlyCloudModelData = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		ModelData partlyCloudModelData2 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		ModelData partlyCloudModelData3 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
+		short partlyCloudFaceColour = partlyCloudModelData.getFaceColors()[0];
+		short partlyCloudReplaceColour = JagexColor.packHSL(54, 0, JagexColor.LUMINANCE_MAX);
+		partlyCloudyModel = partlyCloudModelData.scale(90, 90, 90).translate(0, -800, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).light();
+		partlyCloudyModel2 = partlyCloudModelData2.scale(100, 100, 100).translate(0, -900, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).rotateY90Ccw().light();
+		partlyCloudyModel3 = partlyCloudModelData3.scale(80, 80, 80).translate(0, -700, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).rotateY180Ccw().light();
+
 		ModelData fogModelData = client.loadModelData(FOG_MODEL).cloneVertices().cloneColors().cloneTransparencies();
 		short fogFaceColour = fogModelData.getFaceColors()[0];
 		short fogReplaceColour = JagexColor.packHSL(54, 0, 77);
 		fogModel = fogModelData.scale(64, 128, 64).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
-		ModelData ashModelData = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices().scale(128, 160, 128).translate(0, 180, 0);
-		short[] ashFaceColours = ashModelData.getFaceColors();
-		short ashColour1 = JagexColor.packHSL(39, 1, 40);
-		short ashColour2 = JagexColor.packHSL(39, 1, 40);
-		ashModelData.recolor(ashFaceColours[0], ashColour1).recolor(ashFaceColours[2], ashColour2);
-		ashModel = ashModelData.scale(192, 256, 192).translate(0, 420, 0).light();
-
 		ModelData sandModelData = client.loadModelData(SAND_MODEL).cloneVertices();
 		sandModel = sandModelData.scale(256, 256, 256).light(ModelData.DEFAULT_AMBIENT, 1200, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
 		ModelData snowModelData = client.loadModelData(SNOW_MODEL).cloneVertices();
+		ModelData snowModelData2 = client.loadModelData(SNOW_MODEL).cloneVertices();
+		ModelData snowModelData3 = client.loadModelData(SNOW_MODEL).cloneVertices();
 		snowModel = snowModelData.scale(128, 192, 128).translate(0, 190, 0).light();
+		snowModel2 = snowModelData2.scale(128, 192, 128).translate(0, 190, 0).rotateY90Ccw().light();
+		snowModel3 = snowModelData3.scale(128, 192, 128).translate(0, 190, 0).rotateY270Ccw().light();
 
 		ModelData rainModelData = client.loadModelData(RAIN_MODEL).cloneVertices();
+		ModelData rainModelData2 = client.loadModelData(RAIN_MODEL).cloneVertices();
+		ModelData rainModelData3 = client.loadModelData(RAIN_MODEL).cloneVertices();
 		short[] rainFaceColours = rainModelData.getFaceColors();
-		short rainRippleColour = JagexColor.packHSL(32, 0, 110);
+		short[] rainFaceColours2 = rainModelData2.getFaceColors();
+		short[] rainFaceColours3 = rainModelData3.getFaceColors();
+		short rainRippleColour = JagexColor.packHSL(32, 0, JagexColor.LUMINANCE_MAX);
 		short rainDropColour = JagexColor.packHSL(32, 1, 120);
-		rainModelData.recolor(rainFaceColours[0], rainRippleColour).recolor(rainFaceColours[23], rainDropColour);
-		rainModel = rainModelData.scale(105, 256, 105).light();
+		rainModel = rainModelData.scale(100, 256, 100).recolor(rainFaceColours[0], rainRippleColour).recolor(rainFaceColours[23], rainDropColour).light();
+		rainModel2 = rainModelData2.scale(90, 256, 90).recolor(rainFaceColours2[0], rainRippleColour).recolor(rainFaceColours2[23], rainDropColour).rotateY90Ccw().light();
+		rainModel3 = rainModelData3.scale(110, 256, 110).recolor(rainFaceColours3[0], rainRippleColour).recolor(rainFaceColours3[23], rainDropColour).rotateY270Ccw().light();
 
 		ModelData stormModelData = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
+		ModelData stormModelData2 = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
+		ModelData stormModelData3 = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
 		short[] stormFaceColours = stormModelData.getFaceColors();
-		short stormRippleColour = JagexColor.packHSL(38, 0, 105);
-		short stormDropColour = JagexColor.packHSL(38, 2, 95);
-		stormModelData.recolor(stormFaceColours[0], stormRippleColour).recolor(stormFaceColours[23], stormDropColour);
-		stormModel = stormModelData.scale(115, 384, 115).light();
+		short[] stormFaceColours2 = stormModelData2.getFaceColors();
+		short[] stormFaceColours3 = stormModelData3.getFaceColors();
+		short stormRippleColour = JagexColor.packHSL(38, 1, 110);
+		short stormDropColour = JagexColor.packHSL(38, 2, 105);
+		stormModel = stormModelData.scale(110, 410, 110).recolor(stormFaceColours[0], stormRippleColour).recolor(stormFaceColours[23], stormDropColour).light();
+		stormModel2 = stormModelData2.scale(100, 410, 100).recolor(stormFaceColours2[0], stormRippleColour).recolor(stormFaceColours2[23], stormDropColour).rotateY90Ccw().light();
+		stormModel3 = stormModelData3.scale(120, 410, 120).recolor(stormFaceColours3[0], stormRippleColour).recolor(stormFaceColours3[23], stormDropColour).rotateY90Ccw().light();
 
-		starModel = client.loadModel(STAR_MODEL);
+		ModelData starModelData = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
+		ModelData starModelData2 = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
+		ModelData starModelData3 = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
+		short[] starFaceColours = starModelData.getFaceColors();
+		short[] starFaceColours2 = starModelData2.getFaceColors();
+		short[] starFaceColours3 = starModelData3.getFaceColors();
+		short starShellReplaceColour = JagexColor.packHSL(10, 2, 60);
+		short starInsideReplaceColour = JagexColor.packHSL(10, 4, 80);
+		starModel = starModelData.scale(80, 80, 80).translate(0, -800, 0).recolor(starFaceColours[0], starShellReplaceColour).recolor(starFaceColours[45], starInsideReplaceColour).light();
+		starModel2 = starModelData2.scale(65, 65, 65).translate(0, -900, 0).recolor(starFaceColours2[0], starShellReplaceColour).recolor(starFaceColours2[45], starInsideReplaceColour).light();
+		starModel3 = starModelData3.scale(95, 95, 95).translate(0, -700, 0).recolor(starFaceColours3[0], starShellReplaceColour).recolor(starFaceColours3[45], starInsideReplaceColour).light();
 
 		ashAnimation = client.loadAnimation(ASH_ANIMATION);
+		cloudAnimation = client.loadAnimation(CLOUD_ANIMATION);
 		fogAnimation = client.loadAnimation(FOG_ANIMATION);
 		rainAnimation = client.loadAnimation(RAIN_ANIMATION);
 		sandAnimation = client.loadAnimation(SAND_ANIMATION);
@@ -853,28 +975,93 @@ public class CyclesPlugin extends Plugin
 		starAnimation = client.loadAnimation(STAR_ANIMATION);
 	}
 
-	private Model getWeatherModel(Condition currentWeather)
+	private Model getWeatherModel(Condition currentWeather, int alternative)
 	{
 		switch (currentWeather)
 		{
 			case WEATHER_ASHFALL:
-				return ashModel;
+				switch(alternative)
+				{
+					default:
+					case 1:
+						return ashModel;
+					case 2:
+						return ashModel2;
+					case 3:
+						return ashModel3;
+				}
+			case WEATHER_CLOUDY:
+				switch(alternative)
+				{
+					default:
+					case 1:
+						return cloudModel;
+					case 2:
+						return cloudModel2;
+					case 3:
+						return cloudModel3;
+				}
 			case WEATHER_COSMOS:
-				return starModel;
+				switch(alternative)
+				{
+					default:
+					case 1:
+						return starModel;
+					case 2:
+						return starModel2;
+					case 3:
+						return starModel3;
+				}
 			case WEATHER_FOGGY:
 				return fogModel;
+			case WEATHER_PARTLY_CLOUDY:
+				switch (alternative)
+				{
+					default:
+					case 1:
+						return partlyCloudyModel;
+					case 2:
+						return partlyCloudyModel2;
+					case 3:
+						return partlyCloudyModel3;
+				}
 			case WEATHER_SANDSTORM:
 				return sandModel;
 			case WEATHER_SNOWING:
-				return snowModel;
+				switch (alternative)
+				{
+					default:
+					case 1:
+						return snowModel;
+					case 2:
+						return snowModel2;
+					case 3:
+						return snowModel3;
+				}
 			case WEATHER_RAINING:
-				return rainModel;
+				switch (alternative)
+				{
+					default:
+					case 1:
+						return rainModel;
+					case 2:
+						return rainModel2;
+					case 3:
+						return rainModel3;
+				}
 			case WEATHER_STORM:
-				return stormModel;
+				switch (alternative)
+				{
+					default:
+					case 1:
+						return stormModel;
+					case 2:
+						return stormModel2;
+					case 3:
+						return stormModel3;
+				}
 			default:
-			case WEATHER_CLOUDY:
 			case WEATHER_COVERED:
-			case WEATHER_PARTLY_CLOUDY:
 			case WEATHER_SUNNY:
 				return null;
 		}
@@ -886,6 +1073,9 @@ public class CyclesPlugin extends Plugin
 		{
 			case WEATHER_ASHFALL:
 				return ashAnimation;
+			case WEATHER_CLOUDY:
+			case WEATHER_PARTLY_CLOUDY:
+				return cloudAnimation;
 			case WEATHER_COSMOS:
 				return starAnimation;
 			case WEATHER_FOGGY:
@@ -898,9 +1088,7 @@ public class CyclesPlugin extends Plugin
 			case WEATHER_STORM:
 				return rainAnimation;
 			default:
-			case WEATHER_CLOUDY:
 			case WEATHER_COVERED:
-			case WEATHER_PARTLY_CLOUDY:
 			case WEATHER_SUNNY:
 				return null;
 		}
@@ -920,7 +1108,19 @@ public class CyclesPlugin extends Plugin
 		return Condition.WEATHER_COVERED;
 	}
 
-	private Condition syncSeason()
+	private void syncBiome()
+	{
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
+
+		int playerChunk = wp.getRegionID();
+		if (savedChunk != playerChunk)
+		{
+			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
+			savedChunk = playerChunk;
+		}
+	}
+
+	private void syncSeason()
 	{
 		switch (config.seasonType())
 		{
@@ -930,22 +1130,29 @@ public class CyclesPlugin extends Plugin
 				{
 					default:
 					case 0:
-						return Condition.SEASON_SPRING;
+						currentSeason = Condition.SEASON_SPRING;
+						return;
 					case 1:
-						return Condition.SEASON_SUMMER;
+						currentSeason = Condition.SEASON_SUMMER;
+						return;
 					case 2:
-						return Condition.SEASON_AUTUMN;
+						currentSeason = Condition.SEASON_AUTUMN;
+						return;
 					case 3:
-						return Condition.SEASON_WINTER;
+						currentSeason = Condition.SEASON_WINTER;
+						return;
 				}
 			case SPRING:
-				return Condition.SEASON_SPRING;
+				currentSeason =  Condition.SEASON_SPRING;
+				return;
 			case SUMMER:
-				return Condition.SEASON_SUMMER;
+				currentSeason =  Condition.SEASON_SUMMER;
+				return;
 			case AUTUMN:
-				return Condition.SEASON_AUTUMN;
+				currentSeason =  Condition.SEASON_AUTUMN;
+				return;
 			case WINTER:
-				return Condition.SEASON_WINTER;
+				currentSeason =  Condition.SEASON_WINTER;
 		}
 	}
 

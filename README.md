@@ -6,25 +6,29 @@ It looks even better with 117HD enabled!
 
 # Gallery
 
-### Rain
+### Rainy/Stormy
 
-![Rain](https://imgur.com/Q7RSYp0.gif)
+![Rain](https://imgur.com/cu2hAeR.gif)
 
-### Snow
+### Snowy
 
-![Snow](https://imgur.com/Ps5jQS2.gif)
+![Snow](https://imgur.com/PwY4o34.gif)
 
-### Fog
+### Foggy
 
 ![Fog](https://imgur.com/N5fG6v7.gif)
 
 ### Ashfall
 
-![Ashfall](https://imgur.com/r6tLE9R.gif)
+![Ashfall](https://imgur.com/39YGPgZ.gif)
 
-### Stars
+### Starry
 
-![Stars](https://imgur.com/na8m2vY.gif)
+![Stars](https://imgur.com/FmPmdoQ.gif)
+
+### Cloudy/Partly Cloudy
+
+![Clouds](https://imgur.com/JtWUnKK.gif)
 
 ### Overlay Features
 
@@ -40,7 +44,7 @@ All Overlay options:
 
 # Config
 
-![Config](https://imgur.com/fpStaA2.png)
+![Config](https://imgur.com/xeO1rEY.png)
 
 ### Weather Type & Season Type
 Weather can be manually set or dynamically self-regulated.
@@ -88,6 +92,18 @@ This plugin also features ambient Weather sounds which can be toggled on or off 
 Adjusts the volume of ambience sounds.
 Note that the ambient Weather volume is dependent on both the Ambient Volume setting and Weather Density - higher densities of Weather objects will be louder.
 
+### Disable Weather Underground
+
+![Underground](https://imgur.com/6OtSIWM.png)
+
+Prevents the current Weather Type from occurring while underground. This is already true when Weather Type is set to Dynamic.
+
+### Enable Clouds
+
+![Clouds](https://imgur.com/ZDSDyeh.png)
+
+Allows Cloud objects to appear when the Weather is Cloudy or Partly Cloudy. Players may prefer this option to be turned off if they do not like the Cloud objects that spawn.
+
 ### Enable Fog
 
 ![EnableFog](https://imgur.com/qTrtxIw.png)
@@ -106,6 +122,12 @@ Allows Star objects to appear when the Weather is Stars. Players may prefer this
 
 Allows Snow objects to appear when the Weather is Snowy and while the player is in the Wintertodt chunk. 
 Because the Snow model and animation are taken from Wintertodt's AOE attack, disabling this option reduces confusion over where the Wintertodt is actually attacking.
+
+### Enable Lightning
+
+![EnableLightning](https://imgur.com/RQ4KKwN.png)
+
+WARNING: This option allows the screen to flash white during Storms. This should not be used for photosensitive players.
 
 ## Credits
 

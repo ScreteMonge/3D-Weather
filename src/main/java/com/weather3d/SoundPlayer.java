@@ -1,14 +1,11 @@
 package com.weather3d;
 
 import jaco.mp3.player.MP3Player;
-import jaco.mp3.resources.SoundStream;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.client.config.ConfigManager;
 
 import javax.inject.Inject;
 import javax.sound.sampled.*;
-import java.io.InputStream;
 import java.net.URL;
 
 @Getter

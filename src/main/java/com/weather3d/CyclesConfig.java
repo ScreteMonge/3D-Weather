@@ -9,11 +9,13 @@ public interface CyclesConfig extends Config {
 		DYNAMIC,
 		ASHFALL,
 		CLEAR,
-		FOG,
-		RAIN,
-		SNOW,
-		STARS,
-		STORM
+		CLOUDY,
+		FOGGY,
+		PARTLY_CLOUDY,
+		RAINY,
+		SNOWY,
+		STARRY,
+		STORMY
 	}
 
 	enum WeatherDensity {
@@ -100,10 +102,32 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "disableWeatherUnderground",
+			name = "Disable Weather Underground",
+			description = "Prevents Weather from occurring while in Cave or Lava Cave Biomes, regardless of the set Weather Type",
+			position = 7
+	)
+	default boolean disableWeatherUnderground()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "enableClouds",
+			name = "Enable Clouds",
+			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
+			position = 8
+	)
+	default boolean enableClouds()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 			keyName = "enableFog",
 			name = "Enable Fog",
 			description = "Allows Fog objects to appear while Foggy",
-			position = 7
+			position = 9
 	)
 	default boolean enableFog()
 	{
@@ -114,18 +138,18 @@ public interface CyclesConfig extends Config {
 			keyName = "enableStars",
 			name = "Enable Stars",
 			description = "Allows Star objects to appear while in other Realms",
-			position = 8
+			position = 10
 	)
 	default boolean enableStars()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
 			keyName = "enableWintertodtSnow",
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
-			position = 9
+			position = 11
 	)
 	default boolean enableWintertodtSnow()
 	{
@@ -136,7 +160,7 @@ public interface CyclesConfig extends Config {
 			keyName = "enableLightning",
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
-			position = 10
+			position = 12
 	)
 	default boolean enableLightning()
 	{
