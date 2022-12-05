@@ -27,7 +27,7 @@ dependencies {
 
 group = 'com.weather3d'
 version = '1.12-SNAPSHOT'
-sourceCompatibility = '1.8'
+sourceCompatibility = '1.9'
 
 tasks.withType(JavaCompile) {
 	options.encoding = 'UTF-8'

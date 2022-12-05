@@ -432,7 +432,7 @@ public class CyclesPlugin extends Plugin
 		weatherManager.setSoundPlayerTimer(soundTimer);
 		SoundPlayer primarySoundPlayer = weatherManager.getPrimarySoundPlayer();
 
-		if (soundTimer == 230)
+		if (soundTimer >= 230)
 		{
 			weatherManager.setSoundPlayerTimer(0);
 			primarySoundPlayer.setLoopFading(true);
@@ -918,7 +918,7 @@ public class CyclesPlugin extends Plugin
 		ModelData fogModelData = client.loadModelData(FOG_MODEL).cloneVertices().cloneColors().cloneTransparencies();
 		short fogFaceColour = fogModelData.getFaceColors()[0];
 		short fogReplaceColour = JagexColor.packHSL(54, 0, 77);
-		fogModel = fogModelData.scale(64, 128, 64).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+		fogModel = fogModelData.scale(512, 256, 512).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
 		ModelData sandModelData = client.loadModelData(SAND_MODEL).cloneVertices();
 		sandModel = sandModelData.scale(256, 256, 256).light(ModelData.DEFAULT_AMBIENT, 1200, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
@@ -936,7 +936,7 @@ public class CyclesPlugin extends Plugin
 		short[] rainFaceColours = rainModelData.getFaceColors();
 		short[] rainFaceColours2 = rainModelData2.getFaceColors();
 		short[] rainFaceColours3 = rainModelData3.getFaceColors();
-		short rainRippleColour = JagexColor.packHSL(32, 0, JagexColor.LUMINANCE_MAX);
+		short rainRippleColour = JagexColor.packHSL(32, 1, JagexColor.LUMINANCE_MAX);
 		short rainDropColour = JagexColor.packHSL(32, 1, 120);
 		rainModel = rainModelData.scale(100, 256, 100).recolor(rainFaceColours[0], rainRippleColour).recolor(rainFaceColours[23], rainDropColour).light();
 		rainModel2 = rainModelData2.scale(90, 256, 90).recolor(rainFaceColours2[0], rainRippleColour).recolor(rainFaceColours2[23], rainDropColour).rotateY90Ccw().light();
@@ -968,7 +968,7 @@ public class CyclesPlugin extends Plugin
 
 		ashAnimation = client.loadAnimation(ASH_ANIMATION);
 		cloudAnimation = client.loadAnimation(CLOUD_ANIMATION);
-		fogAnimation = client.loadAnimation(FOG_ANIMATION);
+		fogAnimation = client.loadAnimation(CLOUD_ANIMATION);
 		rainAnimation = client.loadAnimation(RAIN_ANIMATION);
 		sandAnimation = client.loadAnimation(SAND_ANIMATION);
 		snowAnimation = client.loadAnimation(SNOW_ANIMATION);

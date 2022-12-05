@@ -58,7 +58,7 @@ public class SoundPlayer
 
     public void stopClip()
     {
-        trackPlayer.pause();
+        trackPlayer.stop();
     }
 
     public boolean isPlaying()
