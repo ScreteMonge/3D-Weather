@@ -918,7 +918,7 @@ public class CyclesPlugin extends Plugin
 		ModelData fogModelData = client.loadModelData(FOG_MODEL).cloneVertices().cloneColors().cloneTransparencies();
 		short fogFaceColour = fogModelData.getFaceColors()[0];
 		short fogReplaceColour = JagexColor.packHSL(54, 0, 77);
-		fogModel = fogModelData.scale(512, 256, 512).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+		fogModel = fogModelData.scale(64, 128, 64).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
 		ModelData sandModelData = client.loadModelData(SAND_MODEL).cloneVertices();
 		sandModel = sandModelData.scale(256, 256, 256).light(ModelData.DEFAULT_AMBIENT, 1200, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
