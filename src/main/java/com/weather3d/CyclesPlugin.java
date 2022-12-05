@@ -968,7 +968,7 @@ public class CyclesPlugin extends Plugin
 
 		ashAnimation = client.loadAnimation(ASH_ANIMATION);
 		cloudAnimation = client.loadAnimation(CLOUD_ANIMATION);
-		fogAnimation = client.loadAnimation(CLOUD_ANIMATION);
+		fogAnimation = client.loadAnimation(FOG_ANIMATION);
 		rainAnimation = client.loadAnimation(RAIN_ANIMATION);
 		sandAnimation = client.loadAnimation(SAND_ANIMATION);
 		snowAnimation = client.loadAnimation(SNOW_ANIMATION);
