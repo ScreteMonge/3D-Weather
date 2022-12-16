@@ -166,4 +166,15 @@ public interface CyclesConfig extends Config {
 	{
 		return false;
 	}
+
+	@ConfigItem(
+			keyName = "winterTheme",
+			name = "Allow 117 Winter Theme Override",
+			description = "Allows 117HD Winter Theme to override current Season",
+			position = 13
+	)
+	default boolean winterTheme()
+	{
+		return true;
+	}
 }

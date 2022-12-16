@@ -16,9 +16,12 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 
 @Slf4j
@@ -41,6 +44,10 @@ public class CyclesPlugin extends Plugin
 	private CyclesOverlay cyclesOverlay;
 	@Inject
 	private LightningOverlay lightningOverlay;
+	@Inject
+	private ConfigManager configManager;
+	@Inject
+	private PluginManager pluginManager;
 
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
 	private Model ashModel;
@@ -115,7 +122,6 @@ public class CyclesPlugin extends Plugin
 
 		if (client.getLocalPlayer() != null)
 		{
-			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 			syncBiome();
 			syncSeason();
 			setConfigWeather();
@@ -156,10 +162,11 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
+		syncSeason();
+
 		if (config.weatherType() == CyclesConfig.WeatherType.DYNAMIC)
 		{
 			syncBiome();
-			syncSeason();
 			Condition nextWeather = syncWeather(currentSeason, currentBiome);
 
 			if (nextWeather != currentWeather)
@@ -1122,6 +1129,27 @@ public class CyclesPlugin extends Plugin
 
 	private void syncSeason()
 	{
+		if (config.winterTheme())
+		{
+			Collection<Plugin> plugins = pluginManager.getPlugins();
+
+			for (Plugin plugin : plugins)
+			{
+				if (plugin.getName().equals("117 HD"))
+				{
+					if (pluginManager.isPluginEnabled(plugin))
+					{
+						boolean winterTheme = configManager.getConfiguration("hd", "winterTheme0", Boolean.TYPE);
+						if (winterTheme)
+						{
+							currentSeason = Condition.SEASON_WINTER;
+							return;
+						}
+					}
+				}
+			}
+		}
+
 		switch (config.seasonType())
 		{
 			default:
