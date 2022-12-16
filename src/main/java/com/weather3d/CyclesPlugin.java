@@ -98,6 +98,7 @@ public class CyclesPlugin extends Plugin
 	private boolean loadedAnimsModels = false;
 	private boolean conditionsSynced = false;
 	public boolean flashLightning = false;
+	private boolean winter117 = false;
 	private final Random random = new Random();
 	private int savedChunk = 0;
 	private int savedZPlane = -1;
@@ -163,10 +164,11 @@ public class CyclesPlugin extends Plugin
 		}
 
 		syncSeason();
+		syncBiome();
 
 		if (config.weatherType() == CyclesConfig.WeatherType.DYNAMIC)
 		{
-			syncBiome();
+
 			Condition nextWeather = syncWeather(currentSeason, currentBiome);
 
 			if (nextWeather != currentWeather)
@@ -1117,9 +1119,16 @@ public class CyclesPlugin extends Plugin
 
 	private void syncBiome()
 	{
-		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
+		if (winter117)
+		{
+			currentBiome = Condition.BIOME_ARCTIC;
+			savedChunk = -1;
+			return;
+		}
 
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
 		int playerChunk = wp.getRegionID();
+
 		if (savedChunk != playerChunk)
 		{
 			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
@@ -1143,12 +1152,15 @@ public class CyclesPlugin extends Plugin
 						if (winterTheme)
 						{
 							currentSeason = Condition.SEASON_WINTER;
+							winter117 = true;
 							return;
 						}
 					}
 				}
 			}
 		}
+
+		winter117 = false;
 
 		switch (config.seasonType())
 		{
