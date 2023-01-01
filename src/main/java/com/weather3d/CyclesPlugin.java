@@ -1119,13 +1119,6 @@ public class CyclesPlugin extends Plugin
 
 	private void syncBiome()
 	{
-		if (winter117)
-		{
-			currentBiome = Condition.BIOME_ARCTIC;
-			savedChunk = -1;
-			return;
-		}
-
 		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
 		int playerChunk = wp.getRegionID();
 
@@ -1133,6 +1126,12 @@ public class CyclesPlugin extends Plugin
 		{
 			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 			savedChunk = playerChunk;
+		}
+
+		if (winter117 && currentBiome != Condition.BIOME_CAVE && currentBiome != Condition.BIOME_LAVA_CAVE)
+		{
+			currentBiome = Condition.BIOME_ARCTIC;
+			savedChunk = -1;
 		}
 	}
 
