@@ -3,13 +3,16 @@ package com.weather3d;
 import jaco.mp3.player.MP3Player;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Inject;
 import javax.sound.sampled.*;
+import java.io.File;
 import java.net.URL;
 
 @Getter
 @Setter
+@Slf4j
 public class SoundPlayer
 {
     @Inject
@@ -19,15 +22,18 @@ public class SoundPlayer
     @Inject
     private AudioSystem audioSystem;
 
-    private boolean trueFading = false;
-    private boolean loopFading = false;
+    private boolean isFading = false;
     private boolean primarySoundPlayer = false;
+    private int timer = 0;
+    private SoundEffect currentTrack;
     private boolean ambienceError = false;
     private final MP3Player trackPlayer = new MP3Player();
     private Thread handlePlayThread = null;
+    private Thread volumeChangeHandler = null;
 
     public void playClip(SoundEffect soundEffect)
     {
+        setTimer(0);
         //A PC having no audio output seems to cause massive issues. This appears to fix it by testing whether the audio system is active
         AudioFormat format = new AudioFormat(1000, 16, 2, true, false);
         try
@@ -44,7 +50,10 @@ public class SoundPlayer
             try
             {
                 String soundLink = soundEffect.getSoundFile();
-                trackPlayer.addToPlayList(new URL(soundLink));
+                if (soundLink.toLowerCase().startsWith("http"))
+                    trackPlayer.addToPlayList(new URL(soundLink));
+                else
+                    trackPlayer.addToPlayList(new File(soundLink)); //this is here for local testing
                 trackPlayer.play();
             }
             catch (Exception e)
@@ -52,13 +61,15 @@ public class SoundPlayer
                 e.printStackTrace();
             }
         });
-
+        currentTrack = soundEffect;
         handlePlayThread.start();
     }
 
     public void stopClip()
     {
+        //log.debug(currentTrack + " SoundPlayer STOPPING!");
         trackPlayer.stop();
+        setTimer(0);
     }
 
     public boolean isPlaying()
@@ -69,6 +80,38 @@ public class SoundPlayer
     public int getCurrentVolume()
     {
         return trackPlayer.getVolume();
+    }
+
+    public void smoothVolumeChange(int endVolume, int milliseconds){
+        if (volumeChangeHandler != null )
+            volumeChangeHandler.interrupt();
+        volumeChangeHandler = new Thread(() -> {
+            try {
+                int startVolume = getCurrentVolume();
+                long startTime = System.currentTimeMillis();
+                long endTime = startTime + milliseconds;
+                while (System.currentTimeMillis() < endTime){
+                    double percentProgress = ((double)(System.currentTimeMillis() - startTime))/ (endTime - startTime);
+                    int newVolume = (int)(startVolume +  sigmoid(percentProgress) * (endVolume - startVolume));
+                    setVolumeLevel(newVolume);
+                    Thread.sleep(100);
+                }
+                setVolumeLevel(endVolume);
+                if (endVolume == 0) {
+                    setFading(false);
+                    stopClip();
+                }
+            }
+            catch (InterruptedException e){
+                return;
+            }
+        });
+        volumeChangeHandler.start();
+    }
+
+    private double sigmoid(double percentProgress) {
+        percentProgress = percentProgress * Math.E * 4;
+        return (Math.exp(percentProgress - Math.E * 2))/(Math.exp(percentProgress - Math.E * 2) + 1);
     }
 
     public void setVolumeLevel(int volume)

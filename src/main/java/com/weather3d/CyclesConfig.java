@@ -113,10 +113,21 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "disableIndoorMuffling",
+			name = "Disable Indoor Muffling",
+			description = "Prevents ambience sound from being muffled while standing indoors.",
+			position = 8
+	)
+	default boolean disableIndoorMuffling()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 			keyName = "enableClouds",
 			name = "Enable Clouds",
 			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
-			position = 8
+			position = 9
 	)
 	default boolean enableClouds()
 	{
@@ -127,7 +138,7 @@ public interface CyclesConfig extends Config {
 			keyName = "enableFog",
 			name = "Enable Fog",
 			description = "Allows Fog objects to appear while Foggy",
-			position = 9
+			position = 10
 	)
 	default boolean enableFog()
 	{
@@ -138,7 +149,7 @@ public interface CyclesConfig extends Config {
 			keyName = "enableStars",
 			name = "Enable Stars",
 			description = "Allows Star objects to appear while in other Realms",
-			position = 10
+			position = 11
 	)
 	default boolean enableStars()
 	{
@@ -149,7 +160,7 @@ public interface CyclesConfig extends Config {
 			keyName = "enableWintertodtSnow",
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
-			position = 11
+			position = 12
 	)
 	default boolean enableWintertodtSnow()
 	{
@@ -160,7 +171,7 @@ public interface CyclesConfig extends Config {
 			keyName = "enableLightning",
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
-			position = 12
+			position = 13
 	)
 	default boolean enableLightning()
 	{
@@ -171,7 +182,7 @@ public interface CyclesConfig extends Config {
 			keyName = "winterTheme",
 			name = "Allow 117 Winter Theme Override",
 			description = "Allows 117HD Winter Theme to override current Season",
-			position = 13
+			position = 14
 	)
 	default boolean winterTheme()
 	{

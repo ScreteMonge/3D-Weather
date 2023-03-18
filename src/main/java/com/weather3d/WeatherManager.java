@@ -23,10 +23,12 @@ public class WeatherManager
     {
         if (soundPlayers[1].isPrimarySoundPlayer())
         {
+            soundPlayers[1].setPrimarySoundPlayer(true);
             soundPlayers[0].setPrimarySoundPlayer(false);
             return soundPlayers[1];
         }
 
+        soundPlayers[0].setPrimarySoundPlayer(true);
         soundPlayers[1].setPrimarySoundPlayer(false);
         return soundPlayers[0];
     }
@@ -46,10 +48,8 @@ public class WeatherManager
         }
 
         primSoundPlayer.setPrimarySoundPlayer(false);
-        primSoundPlayer.setTrueFading(true);
 
         secSoundPlayer.setPrimarySoundPlayer(true);
-        secSoundPlayer.setTrueFading(false);
     }
 
     public void stopManagerSoundPlayers()
