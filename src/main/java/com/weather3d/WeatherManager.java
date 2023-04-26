@@ -15,7 +15,7 @@ public class WeatherManager
     private Condition weatherType;
     private SoundPlayer[] soundPlayers;
     private int soundPlayerTimer;
-    private ArrayList<RuneLiteObject> weatherObjArray;
+    private ArrayList<WeatherObject> weatherObjArray;
     private int startRotation;
     private boolean isFading;
 

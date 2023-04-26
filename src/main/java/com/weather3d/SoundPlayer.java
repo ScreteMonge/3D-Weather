@@ -67,7 +67,7 @@ public class SoundPlayer
 
     public void stopClip()
     {
-        //log.debug(currentTrack + " SoundPlayer STOPPING!");
+        log.debug(currentTrack + " SoundPlayer STOPPING!");
         trackPlayer.stop();
         setTimer(0);
     }

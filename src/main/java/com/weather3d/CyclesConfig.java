@@ -22,7 +22,8 @@ public interface CyclesConfig extends Config {
 		LOW,
 		MEDIUM,
 		HIGH,
-		EXTREME
+		EXTREME,
+		GAMEBREAKING
 	}
 
 	enum SeasonType {
@@ -33,11 +34,19 @@ public interface CyclesConfig extends Config {
 		WINTER
 	}
 
+	@ConfigSection(
+			name = "General",
+			description = "General settings",
+			position = 0
+	)
+	String generalSettings = "generalSettings";
+
 	@ConfigItem(
-		keyName = "weatherType",
-		name = "Weather Type",
-		description = "Determines the current Weather (Dynamic automatically cycles based on Season and Biome)",
-		position = 1
+			keyName = "weatherType",
+			name = "Weather Type",
+			description = "Determines the current Weather (Dynamic automatically cycles based on Season and Biome)",
+			section = generalSettings,
+			position = 1
 	)
 	default WeatherType weatherType()
 	{
@@ -48,6 +57,7 @@ public interface CyclesConfig extends Config {
 			keyName = "seasonType",
 			name = "Season Type",
 			description = "Determines the current Season and its Weather cycle (only relevant if Weather Type is Dynamic)",
+			section = generalSettings,
 			position = 2
 	)
 	default SeasonType seasonType()
@@ -59,6 +69,7 @@ public interface CyclesConfig extends Config {
 			keyName = "weatherDensity",
 			name = "Weather Density",
 			description = "Determines density of Weather objects (lower is better for performance)",
+			section = generalSettings,
 			position = 3
 	)
 	default WeatherDensity weatherDensity()
@@ -68,8 +79,9 @@ public interface CyclesConfig extends Config {
 
 	@ConfigItem(
 			keyName = "toggleOverlay",
-			name = "Toggle Overlay",
+			name = "Enable Overlay",
 			description = "Displays an overlay indicating Weather, Biome, and Season",
+			section = generalSettings,
 			position = 4
 	)
 	default boolean toggleOverlay()
@@ -78,10 +90,30 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
-			keyName = "toggleAmbience",
-			name = "Toggle Ambience",
-			description = "Toggles ambient Weather sounds on/off",
+			keyName = "disableWeatherUnderground",
+			name = "Disable Weather Underground",
+			description = "Prevents Weather from occurring while in Cave or Lava Cave Biomes, regardless of the set Weather Type",
+			section = generalSettings,
 			position = 5
+	)
+	default boolean disableWeatherUnderground()
+	{
+		return true;
+	}
+
+	@ConfigSection(
+			name = "Audio",
+			description = "Audio settings",
+			position = 6
+	)
+	String audioSettings = "audioSettings";
+
+	@ConfigItem(
+			keyName = "toggleAmbience",
+			name = "Enable Ambience",
+			description = "Toggles ambient Weather sounds on/off",
+			section = audioSettings,
+			position = 7
 	)
 	default boolean toggleAmbience()
 	{
@@ -92,7 +124,8 @@ public interface CyclesConfig extends Config {
 			keyName = "ambientVolume",
 			name = "Ambient Volume",
 			description = "Sets the volume of ambient Weather sounds",
-			position = 6
+			section = audioSettings,
+			position = 8
 	)
 	@Units(Units.PERCENT)
 	@Range(max = 100)
@@ -102,32 +135,30 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
-			keyName = "disableWeatherUnderground",
-			name = "Disable Weather Underground",
-			description = "Prevents Weather from occurring while in Cave or Lava Cave Biomes, regardless of the set Weather Type",
-			position = 7
-	)
-	default boolean disableWeatherUnderground()
-	{
-		return true;
-	}
-
-	@ConfigItem(
 			keyName = "disableIndoorMuffling",
 			name = "Disable Indoor Muffling",
 			description = "Prevents ambience sound from being muffled while standing indoors.",
-			position = 8
+			section = audioSettings,
+			position = 9
 	)
 	default boolean disableIndoorMuffling()
 	{
 		return false;
 	}
 
+	@ConfigSection(
+			name = "Weathers",
+			description = "Weather toggles",
+			position = 10
+	)
+	String weatherToggles = "weatherToggles";
+
 	@ConfigItem(
 			keyName = "enableClouds",
 			name = "Enable Clouds",
 			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
-			position = 9
+			section = weatherToggles,
+			position = 11
 	)
 	default boolean enableClouds()
 	{
@@ -138,7 +169,8 @@ public interface CyclesConfig extends Config {
 			keyName = "enableFog",
 			name = "Enable Fog",
 			description = "Allows Fog objects to appear while Foggy",
-			position = 10
+			section = weatherToggles,
+			position = 12
 	)
 	default boolean enableFog()
 	{
@@ -149,7 +181,8 @@ public interface CyclesConfig extends Config {
 			keyName = "enableStars",
 			name = "Enable Stars",
 			description = "Allows Star objects to appear while in other Realms",
-			position = 11
+			section = weatherToggles,
+			position = 13
 	)
 	default boolean enableStars()
 	{
@@ -160,7 +193,8 @@ public interface CyclesConfig extends Config {
 			keyName = "enableWintertodtSnow",
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
-			position = 12
+			section = weatherToggles,
+			position = 14
 	)
 	default boolean enableWintertodtSnow()
 	{
@@ -171,18 +205,27 @@ public interface CyclesConfig extends Config {
 			keyName = "enableLightning",
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
-			position = 13
+			section = weatherToggles,
+			position = 15
 	)
 	default boolean enableLightning()
 	{
 		return false;
 	}
 
+	@ConfigSection(
+			name = "Other",
+			description = "Other Settings",
+			position = 16
+	)
+	String otherSettings = "otherSettings";
+
 	@ConfigItem(
 			keyName = "winterTheme",
 			name = "Allow 117 Winter Theme Override",
 			description = "Allows 117HD Winter Theme to override current Season",
-			position = 14
+			section = otherSettings,
+			position = 17
 	)
 	default boolean winterTheme()
 	{

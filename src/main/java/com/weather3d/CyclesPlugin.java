@@ -19,7 +19,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
@@ -50,64 +49,24 @@ public class CyclesPlugin extends Plugin
 	private ConfigManager configManager;
 	@Inject
 	private PluginManager pluginManager;
+	@Inject
+	private ModelHandler modelHandler;
 
+	private final Random random = new Random();
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
-	private Model ashModel;
-	private Model ashModel2;
-	private Model ashModel3;
-	private Model cloudModel;
-	private Model cloudModel2;
-	private Model cloudModel3;
-	private Model fogModel;
-	private Model partlyCloudyModel;
-	private Model partlyCloudyModel2;
-	private Model partlyCloudyModel3;
-	private Model rainModel;
-	private Model rainModel2;
-	private Model rainModel3;
-	private Model sandModel;
-	private Model snowModel;
-	private Model snowModel2;
-	private Model snowModel3;
-	private Model starModel;
-	private Model starModel2;
-	private Model starModel3;
-	private Model stormModel;
-	private Model stormModel2;
-	private Model stormModel3;
-	private Animation ashAnimation;
-	private Animation cloudAnimation;
-	private Animation fogAnimation;
-	private Animation rainAnimation;
-	private Animation sandAnimation;
-	private Animation snowAnimation;
-	private Animation starAnimation;
-	private final int ASH_MODEL = 27835;
-	private final int ASH_ANIMATION = 7000;
-	private final int CLOUD_MODEL = 4086;
-	private final int CLOUD_ANIMATION = 6470;
-	private final int FOG_MODEL = 29290;
-	private final int FOG_ANIMATION = 4516;
-	private final int RAIN_MODEL = 15524;
-	private final int RAIN_ANIMATION = 7001;
-	private final int SAND_MODEL = 9994;
-	private final int SAND_ANIMATION = 2882;
-	private final int SNOW_MODEL = 27835;
-	private final int SNOW_ANIMATION = 7000;
-	private final int STAR_MODEL = 16374;
-	private final int STAR_ANIMATION = 7971;
-
 	private boolean loadedAnimsModels = false;
 	private boolean conditionsSynced = false;
 	private boolean isPlayerIndoors = false;
 	public boolean flashLightning = false;
 	private boolean winter117 = false;
-	private final Random random = new Random();
 	private int savedChunk = 0;
 	private int savedZPlane = -1;
 	private int zoneObjRecovery = 0;
 	private final int WINTERTODT_CHUNK = 6462;
 	private final int OBJ_ROTATION_CONSTANT = 20;
+	private final int MODEL_TRANSPARENT_SWAP_DISTANCE = 3000;
+	private final int MODEL_DISAPPEAR_DISTANCE = 2500;
+
 	@Getter
 	private Condition currentSeason = Condition.SEASON_SPRING;
 	@Getter
@@ -118,11 +77,8 @@ public class CyclesPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		if (config.toggleOverlay())
-		{
-			overlayManager.add(cyclesOverlay);
-			overlayManager.add(lightningOverlay);
-		}
+		overlayManager.add(cyclesOverlay);
+		overlayManager.add(lightningOverlay);
 
 		if (client.getLocalPlayer() != null)
 		{
@@ -142,11 +98,50 @@ public class CyclesPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onClientTick(ClientTick event)
+	{
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			Condition weatherType = weatherManager.getWeatherType();
+
+			if (weatherType == Condition.WEATHER_CLOUDY
+					|| weatherType == Condition.WEATHER_PARTLY_CLOUDY
+					|| weatherType == Condition.WEATHER_COSMOS)
+			{
+				LocalPoint localPoint = new LocalPoint(client.getCameraX(), client.getCameraY());
+
+				for (WeatherObject weatherObject : weatherManager.getWeatherObjArray())
+				{
+					RuneLiteObject runeLiteObject = weatherObject.getRuneLiteObject();
+					int objectVariant = weatherObject.getObjVariant();
+					int distance = runeLiteObject.getLocation().distanceTo(localPoint);
+
+					if (distance < MODEL_DISAPPEAR_DISTANCE)
+					{
+						runeLiteObject.setActive(false);
+						continue;
+					}
+
+					runeLiteObject.setActive(true);
+
+					if (distance < MODEL_TRANSPARENT_SWAP_DISTANCE)
+					{
+						runeLiteObject.setModel(modelHandler.getTransparentModel(weatherType, objectVariant));
+						continue;
+					}
+
+					runeLiteObject.setModel(modelHandler.getRegularModel(weatherType, objectVariant));
+				}
+			}
+		}
+	}
+
+	@Subscribe
 	public void onGameTick(GameTick event)
 	{
 		if (!loadedAnimsModels)
 		{
-			loadModelsAnimations();
+			modelHandler.loadModels();
 			loadedAnimsModels = true;
 		}
 
@@ -169,8 +164,12 @@ public class CyclesPlugin extends Plugin
 		isPlayerIndoors = true;
 		WorldPoint playerLoc = client.getLocalPlayer().getWorldLocation();
 		for (Tile t : getAvailableTiles())
+		{
 			if (t.getWorldLocation().getX() == playerLoc.getX() && t.getWorldLocation().getY() == playerLoc.getY())
+			{
 				isPlayerIndoors = false;
+			}
+		}
 
 		syncSeason();
 		syncBiome();
@@ -280,7 +279,7 @@ public class CyclesPlugin extends Plugin
 
 				if (weatherType.isHasPrecipitation())
 				{
-					ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+					ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
 					clientThread.invoke(() -> {
 						while (array.size() > getMaxWeatherObjects(weatherType))
@@ -431,12 +430,16 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
-		public void handleSoundChanges(WeatherManager weatherManager)
+	public void handleSoundChanges(WeatherManager weatherManager)
 	{
 		//Update soundplayer timers
 		for (SoundPlayer sp : weatherManager.getSoundPlayers())
+		{
 			if (sp.isPlaying())
+			{
 				sp.setTimer(sp.getTimer() + 1);
+			}
+		}
 
 		Condition weatherCondition = weatherManager.getWeatherType();
 		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
@@ -454,10 +457,14 @@ public class CyclesPlugin extends Plugin
 		}
 
 		//Fade out inappropriate weathermanager soundplayers
-		if (weatherCondition != currentWeather){
-			for (SoundPlayer sp : weatherManager.getSoundPlayers()){
-				if (sp.isPlaying()){
-					if (!sp.isFading()){
+		if (weatherCondition != currentWeather)
+		{
+			for (SoundPlayer sp : weatherManager.getSoundPlayers())
+			{
+				if (sp.isPlaying())
+				{
+					if (!sp.isFading())
+					{
 						sp.setFading(true);
 						sp.smoothVolumeChange(0, 6000);
 					}
@@ -465,8 +472,11 @@ public class CyclesPlugin extends Plugin
 			}
 			return;
 		}
-		else { //This happens when you switch from weather condition A to weather condition B and then back to A again before the first transition was finished
-			if (weatherManager.getPrimarySoundPlayer().isFading()) {
+		else
+		{
+			//This happens when you switch from weather condition A to weather condition B and then back to A again before the first transition was finished
+			if (weatherManager.getPrimarySoundPlayer().isFading())
+			{
 				weatherManager.getPrimarySoundPlayer().setFading(false);
 				weatherManager.getPrimarySoundPlayer().getVolumeChangeHandler().interrupt(); //stop fading oot
 			}
@@ -476,42 +486,56 @@ public class CyclesPlugin extends Plugin
 
 		SoundEffect appropriateSound;
 		SoundEffect outdoorSound = weatherManager.getWeatherType().getSoundEffect();
-		if (isPlayerIndoors && !config.disableIndoorMuffling()){
+		if (isPlayerIndoors && !config.disableIndoorMuffling())
+		{
 			if (outdoorSound == RAIN)
+			{
 				appropriateSound = RAIN_MUFFLED;
+			}
 			else if (outdoorSound == THUNDERSTORM)
+			{
 				appropriateSound = THUNDERSTORM_MUFFLED;
+			}
 			else if (outdoorSound == WIND)
+			{
 				appropriateSound = WIND_MUFFLED;
+			}
 			else
+			{
 				appropriateSound = outdoorSound;
+			}
 		}
 		else
 			appropriateSound = outdoorSound;
 
 		// Make sure the primary soundplayer is at the right volume, if it's not already fading in or whatever
 		SoundPlayer primary = weatherManager.getPrimarySoundPlayer();
-		if (primary.getCurrentTrack() != null && primary.getCurrentVolume() != volumeGoal){
+		if (primary.getCurrentTrack() != null && primary.getCurrentVolume() != volumeGoal)
+		{
 			//If the volume change handler is uninitialized, or is initialized and isn't currently changing the volume
-			if (primary.getVolumeChangeHandler() == null || !primary.getVolumeChangeHandler().isAlive()) {
+			if (primary.getVolumeChangeHandler() == null || !primary.getVolumeChangeHandler().isAlive())
+			{
 				log.debug("Primary at wrong volume. Setting back to " + volumeGoal);
 				primary.smoothVolumeChange(volumeGoal, 6000);
 			}
 		}
 
 		// Initialize the primary soundplayer if it ain't initialized yet, or is not playing for some reason
-		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying()){
+		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
+		{
 			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor()));
 			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
 			weatherManager.getPrimarySoundPlayer().smoothVolumeChange((int)(config.ambientVolume() * getWeatherDensityFactor()), 12000);
 			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
 		}
 		//Handle looping, as well as muffling/unmuffling of sound when player walks indoors/outdoors
-		else if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() != appropriateSound || weatherManager.getPrimarySoundPlayer().getTimer() > 230) {
+		else if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() != appropriateSound || weatherManager.getPrimarySoundPlayer().getTimer() > 230)
+		{
 			log.debug("Looping because " + weatherManager.getPrimarySoundPlayer().getCurrentTrack() + " != " + appropriateSound + " or it was just time to loop");
 			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(0, 6000);
 			weatherManager.switchSoundPlayerPriority();
-			if (!weatherManager.getPrimarySoundPlayer().isPlaying()){
+			if (!weatherManager.getPrimarySoundPlayer().isPlaying())
+			{
 				weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
 				weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
 			}
@@ -536,6 +560,7 @@ public class CyclesPlugin extends Plugin
 			case HIGH:
 				return 0.85;
 			case EXTREME:
+			case GAMEBREAKING:
 				return 1;
 		}
 	}
@@ -550,7 +575,7 @@ public class CyclesPlugin extends Plugin
 	public void fadeWeatherManager(WeatherManager weatherManager)
 	{
 		int trimNumber = getMaxWeatherObjects(weatherManager.getWeatherType()) / OBJ_ROTATION_CONSTANT;
-		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
 		if (trimNumber < array.size() / OBJ_ROTATION_CONSTANT)
 		{
@@ -636,7 +661,7 @@ public class CyclesPlugin extends Plugin
 		}
 
 		int maxWeatherObj = getMaxWeatherObjects(weather);
-		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
 		if (array.size() < maxWeatherObj)
 		{
@@ -666,6 +691,8 @@ public class CyclesPlugin extends Plugin
 				return weatherCondition.getObjHigh();
 			case EXTREME:
 				return weatherCondition.getObjExtreme();
+			case GAMEBREAKING:
+				return weatherCondition.getObjGameCrashing();
 		}
 	}
 
@@ -673,10 +700,10 @@ public class CyclesPlugin extends Plugin
 	{
 		ArrayList<Tile> availableTiles = getAvailableTiles();
 		int z = client.getPlane();
-		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
 		Condition weatherCondition = weatherManager.getWeatherType();
-		Animation weatherAnimation = getWeatherAnimation(weatherCondition);
+		Animation weatherAnimation = modelHandler.getWeatherAnimation(weatherCondition);
 		int alternate = 1;
 
 		for (int i = 0; i < objects; i++)
@@ -684,15 +711,14 @@ public class CyclesPlugin extends Plugin
 			int roll = random.nextInt(availableTiles.size());
 			Tile openTile = availableTiles.get(roll);
 
-			Model weatherModel = getWeatherModel(weatherCondition, alternate);
+			WeatherObject weatherObject = createWeatherObject(weatherCondition, weatherAnimation, openTile.getLocalLocation(), z, alternate);
 			alternate += 1;
 			if (alternate > weatherCondition.getModelVariety())
 			{
 				alternate = 1;
 			}
 
-			RuneLiteObject runeLiteObject = createWeatherObject(weatherModel, weatherAnimation, openTile.getLocalLocation(), z);
-			array.add(runeLiteObject);
+			array.add(weatherObject);
 			if (array.size() == getMaxWeatherObjects(weatherManager.getWeatherType()))
 			{
 				return;
@@ -700,36 +726,41 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
-	public RuneLiteObject createWeatherObject(Model weatherModel, Animation weatherAnimation, LocalPoint lp, int z)
+	public WeatherObject createWeatherObject(Condition weatherCondition, Animation weatherAnimation, LocalPoint lp, int plane, int objectVariant)
 	{
 		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
+		Model weatherModel = modelHandler.getWeatherModel(weatherCondition, objectVariant);
+		int radius = modelHandler.getModelRadius(weatherCondition);
+
 		runeLiteObject.setModel(weatherModel);
+		runeLiteObject.setRadius(radius);
+		runeLiteObject.setDrawFrontTilesFirst(true);
 		runeLiteObject.setAnimation(weatherAnimation);
-		runeLiteObject.setLocation(lp, z);
+		runeLiteObject.setLocation(lp, plane);
 		runeLiteObject.setShouldLoop(true);
 		runeLiteObject.setActive(true);
-		return runeLiteObject;
+		return new WeatherObject(runeLiteObject, objectVariant);
 	}
 
-	public void removeWeatherObject(int index, ArrayList<RuneLiteObject> weatherArray)
+	public void removeWeatherObject(int index, ArrayList<WeatherObject> weatherArray)
 	{
 		if (index >= weatherArray.size())
 		{
 			return;
 		}
 
-		RuneLiteObject runeLiteObject = weatherArray.get(index);
-		runeLiteObject.setActive(false);
+		WeatherObject weatherObject = weatherArray.get(index);
+		weatherObject.getRuneLiteObject().setActive(false);
 		weatherArray.remove(index);
 	}
 
 	public void clearWeatherObjects(WeatherManager weatherManager)
 	{
-		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
-		for (RuneLiteObject runeLiteObject : array)
+		for (WeatherObject weatherObject : array)
 		{
-			runeLiteObject.setActive(false);
+			weatherObject.getRuneLiteObject().setActive(false);
 		}
 
 		array.clear();
@@ -747,7 +778,7 @@ public class CyclesPlugin extends Plugin
 	{
 		int z = client.getPlane();
 		int beginRotation = weatherManager.getStartRotation();
-		ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 		Condition weather = weatherManager.getWeatherType();
 
 		for (int i = beginRotation; i < beginRotation + numToRelocate; i++)
@@ -761,9 +792,10 @@ public class CyclesPlugin extends Plugin
 				break;
 			}
 
-			RuneLiteObject runeLiteObject = array.get(i);
+			WeatherObject weatherObject = array.get(i);
+			RuneLiteObject runeLiteObject = weatherObject.getRuneLiteObject();
 			runeLiteObject.setLocation(nextTile.getLocalLocation(), z);
-			runeLiteObject.setAnimation(getWeatherAnimation(weather));
+			runeLiteObject.setAnimation(modelHandler.getWeatherAnimation(weather));
 		}
 
 		weatherManager.setStartRotation(beginRotation + numToRelocate);
@@ -797,7 +829,7 @@ public class CyclesPlugin extends Plugin
 		for (WeatherManager weatherManager : weatherManagerList)
 		{
 			Condition weatherType = weatherManager.getWeatherType();
-			ArrayList<RuneLiteObject> array = weatherManager.getWeatherObjArray();
+			ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 			int size = (int) (array.size() * 0.8);
 			clearWeatherObjects(weatherManager);
 			if (weatherType == currentWeather)
@@ -876,217 +908,6 @@ public class CyclesPlugin extends Plugin
 			case STORMY:
 				currentWeather = Condition.WEATHER_STORM;
 				break;
-		}
-	}
-
-	public void loadModelsAnimations()
-	{
-		ModelData ashModelData = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
-		ModelData ashModelData2 = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
-		ModelData ashModelData3 = client.loadModelData(ASH_MODEL).cloneColors().cloneVertices();
-		short[] ashFaceColours = ashModelData.getFaceColors();
-		short[] ashFaceColours2 = ashModelData2.getFaceColors();
-		short[] ashFaceColours3 = ashModelData3.getFaceColors();
-		short ashColour1 = JagexColor.packHSL(39, 1, 40);
-		short ashColour2 = JagexColor.packHSL(39, 1, 40);
-		ashModel = ashModelData.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours[0], ashColour1).recolor(ashFaceColours[2], ashColour2).light();
-		ashModel2 = ashModelData2.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours2[0], ashColour1).recolor(ashFaceColours2[2], ashColour2).rotateY90Ccw().light();
-		ashModel3 = ashModelData3.scale(128, 192, 128).translate(0, 180, 0).recolor(ashFaceColours3[0], ashColour1).recolor(ashFaceColours3[2], ashColour2).rotateY270Ccw().light();
-
-		ModelData cloudModelData = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		ModelData cloudModelData2 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		ModelData cloudModelData3 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		short cloudFaceColour = cloudModelData.getFaceColors()[0];
-		short cloudReplaceColour = JagexColor.packHSL(54, 0, 90);
-		cloudModel = cloudModelData.scale(90, 90, 90).translate(0, -800, 0).recolor(cloudFaceColour, cloudReplaceColour).light();
-		cloudModel2 = cloudModelData2.scale(100, 100, 100).translate(0, -900, 0).recolor(cloudFaceColour, cloudReplaceColour).rotateY90Ccw().light();
-		cloudModel3 = cloudModelData3.scale(80, 80, 80).translate(0, -700, 0).recolor(cloudFaceColour, cloudReplaceColour).rotateY180Ccw().light();
-
-		ModelData partlyCloudModelData = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		ModelData partlyCloudModelData2 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		ModelData partlyCloudModelData3 = client.loadModelData(CLOUD_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		short partlyCloudFaceColour = partlyCloudModelData.getFaceColors()[0];
-		short partlyCloudReplaceColour = JagexColor.packHSL(54, 0, JagexColor.LUMINANCE_MAX);
-		partlyCloudyModel = partlyCloudModelData.scale(90, 90, 90).translate(0, -800, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).light();
-		partlyCloudyModel2 = partlyCloudModelData2.scale(100, 100, 100).translate(0, -900, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).rotateY90Ccw().light();
-		partlyCloudyModel3 = partlyCloudModelData3.scale(80, 80, 80).translate(0, -700, 0).recolor(partlyCloudFaceColour, partlyCloudReplaceColour).rotateY180Ccw().light();
-
-		ModelData fogModelData = client.loadModelData(FOG_MODEL).cloneVertices().cloneColors().cloneTransparencies();
-		short fogFaceColour = fogModelData.getFaceColors()[0];
-		short fogReplaceColour = JagexColor.packHSL(54, 0, 77);
-		fogModel = fogModelData.scale(64, 128, 64).recolor(fogFaceColour, fogReplaceColour).light(200, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
-
-		ModelData sandModelData = client.loadModelData(SAND_MODEL).cloneVertices();
-		sandModel = sandModelData.scale(256, 256, 256).light(ModelData.DEFAULT_AMBIENT, 1200, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
-
-		ModelData snowModelData = client.loadModelData(SNOW_MODEL).cloneVertices();
-		ModelData snowModelData2 = client.loadModelData(SNOW_MODEL).cloneVertices();
-		ModelData snowModelData3 = client.loadModelData(SNOW_MODEL).cloneVertices();
-		snowModel = snowModelData.scale(128, 192, 128).translate(0, 190, 0).light();
-		snowModel2 = snowModelData2.scale(128, 192, 128).translate(0, 190, 0).rotateY90Ccw().light();
-		snowModel3 = snowModelData3.scale(128, 192, 128).translate(0, 190, 0).rotateY270Ccw().light();
-
-		ModelData rainModelData = client.loadModelData(RAIN_MODEL).cloneVertices();
-		ModelData rainModelData2 = client.loadModelData(RAIN_MODEL).cloneVertices();
-		ModelData rainModelData3 = client.loadModelData(RAIN_MODEL).cloneVertices();
-		short[] rainFaceColours = rainModelData.getFaceColors();
-		short[] rainFaceColours2 = rainModelData2.getFaceColors();
-		short[] rainFaceColours3 = rainModelData3.getFaceColors();
-		short rainRippleColour = JagexColor.packHSL(32, 1, JagexColor.LUMINANCE_MAX);
-		short rainDropColour = JagexColor.packHSL(32, 1, 120);
-		rainModel = rainModelData.scale(100, 256, 100).recolor(rainFaceColours[0], rainRippleColour).recolor(rainFaceColours[23], rainDropColour).light();
-		rainModel2 = rainModelData2.scale(90, 256, 90).recolor(rainFaceColours2[0], rainRippleColour).recolor(rainFaceColours2[23], rainDropColour).rotateY90Ccw().light();
-		rainModel3 = rainModelData3.scale(110, 256, 110).recolor(rainFaceColours3[0], rainRippleColour).recolor(rainFaceColours3[23], rainDropColour).rotateY270Ccw().light();
-
-		ModelData stormModelData = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
-		ModelData stormModelData2 = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
-		ModelData stormModelData3 = client.loadModelData(RAIN_MODEL).cloneColors().cloneVertices();
-		short[] stormFaceColours = stormModelData.getFaceColors();
-		short[] stormFaceColours2 = stormModelData2.getFaceColors();
-		short[] stormFaceColours3 = stormModelData3.getFaceColors();
-		short stormRippleColour = JagexColor.packHSL(38, 1, 110);
-		short stormDropColour = JagexColor.packHSL(38, 2, 105);
-		stormModel = stormModelData.scale(110, 410, 110).recolor(stormFaceColours[0], stormRippleColour).recolor(stormFaceColours[23], stormDropColour).light();
-		stormModel2 = stormModelData2.scale(100, 410, 100).recolor(stormFaceColours2[0], stormRippleColour).recolor(stormFaceColours2[23], stormDropColour).rotateY90Ccw().light();
-		stormModel3 = stormModelData3.scale(120, 410, 120).recolor(stormFaceColours3[0], stormRippleColour).recolor(stormFaceColours3[23], stormDropColour).rotateY90Ccw().light();
-
-		ModelData starModelData = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
-		ModelData starModelData2 = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
-		ModelData starModelData3 = client.loadModelData(STAR_MODEL).cloneColors().cloneVertices().cloneTransparencies();
-		short[] starFaceColours = starModelData.getFaceColors();
-		short[] starFaceColours2 = starModelData2.getFaceColors();
-		short[] starFaceColours3 = starModelData3.getFaceColors();
-		short starShellReplaceColour = JagexColor.packHSL(10, 2, 60);
-		short starInsideReplaceColour = JagexColor.packHSL(10, 4, 80);
-		starModel = starModelData.scale(80, 80, 80).translate(0, -800, 0).recolor(starFaceColours[0], starShellReplaceColour).recolor(starFaceColours[45], starInsideReplaceColour).light();
-		starModel2 = starModelData2.scale(65, 65, 65).translate(0, -900, 0).recolor(starFaceColours2[0], starShellReplaceColour).recolor(starFaceColours2[45], starInsideReplaceColour).light();
-		starModel3 = starModelData3.scale(95, 95, 95).translate(0, -700, 0).recolor(starFaceColours3[0], starShellReplaceColour).recolor(starFaceColours3[45], starInsideReplaceColour).light();
-
-		ashAnimation = client.loadAnimation(ASH_ANIMATION);
-		cloudAnimation = client.loadAnimation(CLOUD_ANIMATION);
-		fogAnimation = client.loadAnimation(FOG_ANIMATION);
-		rainAnimation = client.loadAnimation(RAIN_ANIMATION);
-		sandAnimation = client.loadAnimation(SAND_ANIMATION);
-		snowAnimation = client.loadAnimation(SNOW_ANIMATION);
-		starAnimation = client.loadAnimation(STAR_ANIMATION);
-	}
-
-	private Model getWeatherModel(Condition currentWeather, int alternative)
-	{
-		switch (currentWeather)
-		{
-			case WEATHER_ASHFALL:
-				switch(alternative)
-				{
-					default:
-					case 1:
-						return ashModel;
-					case 2:
-						return ashModel2;
-					case 3:
-						return ashModel3;
-				}
-			case WEATHER_CLOUDY:
-				switch(alternative)
-				{
-					default:
-					case 1:
-						return cloudModel;
-					case 2:
-						return cloudModel2;
-					case 3:
-						return cloudModel3;
-				}
-			case WEATHER_COSMOS:
-				switch(alternative)
-				{
-					default:
-					case 1:
-						return starModel;
-					case 2:
-						return starModel2;
-					case 3:
-						return starModel3;
-				}
-			case WEATHER_FOGGY:
-				return fogModel;
-			case WEATHER_PARTLY_CLOUDY:
-				switch (alternative)
-				{
-					default:
-					case 1:
-						return partlyCloudyModel;
-					case 2:
-						return partlyCloudyModel2;
-					case 3:
-						return partlyCloudyModel3;
-				}
-			case WEATHER_SANDSTORM:
-				return sandModel;
-			case WEATHER_SNOWING:
-				switch (alternative)
-				{
-					default:
-					case 1:
-						return snowModel;
-					case 2:
-						return snowModel2;
-					case 3:
-						return snowModel3;
-				}
-			case WEATHER_RAINING:
-				switch (alternative)
-				{
-					default:
-					case 1:
-						return rainModel;
-					case 2:
-						return rainModel2;
-					case 3:
-						return rainModel3;
-				}
-			case WEATHER_STORM:
-				switch (alternative)
-				{
-					default:
-					case 1:
-						return stormModel;
-					case 2:
-						return stormModel2;
-					case 3:
-						return stormModel3;
-				}
-			default:
-			case WEATHER_COVERED:
-			case WEATHER_SUNNY:
-				return null;
-		}
-	}
-
-	private Animation getWeatherAnimation(Condition currentWeather)
-	{
-		switch (currentWeather)
-		{
-			case WEATHER_ASHFALL:
-				return ashAnimation;
-			case WEATHER_CLOUDY:
-			case WEATHER_PARTLY_CLOUDY:
-				return cloudAnimation;
-			case WEATHER_COSMOS:
-				return starAnimation;
-			case WEATHER_FOGGY:
-				return fogAnimation;
-			case WEATHER_SANDSTORM:
-				return sandAnimation;
-			case WEATHER_SNOWING:
-				return snowAnimation;
-			case WEATHER_RAINING:
-			case WEATHER_STORM:
-				return rainAnimation;
-			default:
-			case WEATHER_COVERED:
-			case WEATHER_SUNNY:
-				return null;
 		}
 	}
 
