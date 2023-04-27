@@ -18,6 +18,8 @@ public class SoundPlayer
     @Inject
     private CyclesPlugin plugin;
     @Inject
+    private CyclesConfig config;
+    @Inject
     private SourceDataLine sourceDataLine;
     @Inject
     private AudioSystem audioSystem;

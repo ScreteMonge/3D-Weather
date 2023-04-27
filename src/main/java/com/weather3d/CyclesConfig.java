@@ -135,11 +135,25 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "muffledVolume",
+			name = "Muffled Volume",
+			description = "Sets the volume of muffled Weather sounds while indoors",
+			section = audioSettings,
+			position = 9
+	)
+	@Units(Units.PERCENT)
+	@Range(max = 100)
+	default int muffledVolume()
+	{
+		return 50;
+	}
+
+	@ConfigItem(
 			keyName = "disableIndoorMuffling",
 			name = "Disable Indoor Muffling",
 			description = "Prevents ambience sound from being muffled while standing indoors.",
 			section = audioSettings,
-			position = 9
+			position = 10
 	)
 	default boolean disableIndoorMuffling()
 	{
@@ -149,7 +163,7 @@ public interface CyclesConfig extends Config {
 	@ConfigSection(
 			name = "Weathers",
 			description = "Weather toggles",
-			position = 10
+			position = 11
 	)
 	String weatherToggles = "weatherToggles";
 
@@ -158,7 +172,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Clouds",
 			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
 			section = weatherToggles,
-			position = 11
+			position = 12
 	)
 	default boolean enableClouds()
 	{
@@ -170,7 +184,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Fog",
 			description = "Allows Fog objects to appear while Foggy",
 			section = weatherToggles,
-			position = 12
+			position = 13
 	)
 	default boolean enableFog()
 	{
@@ -182,7 +196,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Stars",
 			description = "Allows Star objects to appear while in other Realms",
 			section = weatherToggles,
-			position = 13
+			position = 14
 	)
 	default boolean enableStars()
 	{
@@ -194,7 +208,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
 			section = weatherToggles,
-			position = 14
+			position = 15
 	)
 	default boolean enableWintertodtSnow()
 	{
@@ -206,7 +220,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
 			section = weatherToggles,
-			position = 15
+			position = 16
 	)
 	default boolean enableLightning()
 	{
@@ -216,7 +230,7 @@ public interface CyclesConfig extends Config {
 	@ConfigSection(
 			name = "Other",
 			description = "Other Settings",
-			position = 16
+			position = 17
 	)
 	String otherSettings = "otherSettings";
 
@@ -225,7 +239,7 @@ public interface CyclesConfig extends Config {
 			name = "Allow 117 Winter Theme Override",
 			description = "Allows 117HD Winter Theme to override current Season",
 			section = otherSettings,
-			position = 17
+			position = 18
 	)
 	default boolean winterTheme()
 	{

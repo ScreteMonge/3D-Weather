@@ -291,11 +291,9 @@ public class CyclesPlugin extends Plugin
 
 				if (weatherType.isHasSound())
 				{
-					double volumeDouble = config.ambientVolume() * getWeatherDensityFactor();
-					int volumeMax = (int) volumeDouble;
-
 					for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
 					{
+						int volumeMax = getMaxVolume(soundPlayer.getCurrentTrack().isMuffled());
 						if (soundPlayer.getCurrentVolume() > volumeMax)
 						{
 							soundPlayer.setVolumeLevel(volumeMax);
@@ -442,9 +440,6 @@ public class CyclesPlugin extends Plugin
 		}
 
 		Condition weatherCondition = weatherManager.getWeatherType();
-		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
-		double volumeDouble = (weatherManager.getWeatherObjArray().size() / maxWeatherObjects) * config.ambientVolume() * getWeatherDensityFactor();
-		int volumeGoal = (int) volumeDouble;
 
 		if (!weatherCondition.isHasSound() || !config.toggleAmbience())
 		{
@@ -485,20 +480,24 @@ public class CyclesPlugin extends Plugin
 		//The following code of this function only runs on the appropriate weathermanager
 
 		SoundEffect appropriateSound;
+		boolean muffled = false;
 		SoundEffect outdoorSound = weatherManager.getWeatherType().getSoundEffect();
 		if (isPlayerIndoors && !config.disableIndoorMuffling())
 		{
 			if (outdoorSound == RAIN)
 			{
 				appropriateSound = RAIN_MUFFLED;
+				muffled = true;
 			}
 			else if (outdoorSound == THUNDERSTORM)
 			{
 				appropriateSound = THUNDERSTORM_MUFFLED;
+				muffled = true;
 			}
 			else if (outdoorSound == WIND)
 			{
 				appropriateSound = WIND_MUFFLED;
+				muffled = true;
 			}
 			else
 			{
@@ -506,7 +505,14 @@ public class CyclesPlugin extends Plugin
 			}
 		}
 		else
+		{
 			appropriateSound = outdoorSound;
+		}
+
+
+		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
+		double volumeDouble = (weatherManager.getWeatherObjArray().size() / maxWeatherObjects) * getMaxVolume(muffled);
+		int volumeGoal = (int) volumeDouble;
 
 		// Make sure the primary soundplayer is at the right volume, if it's not already fading in or whatever
 		SoundPlayer primary = weatherManager.getPrimarySoundPlayer();
@@ -525,7 +531,7 @@ public class CyclesPlugin extends Plugin
 		{
 			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor()));
 			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
-			weatherManager.getPrimarySoundPlayer().smoothVolumeChange((int)(config.ambientVolume() * getWeatherDensityFactor()), 12000);
+			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(getMaxVolume(muffled), 12000);
 			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
 		}
 		//Handle looping, as well as muffling/unmuffling of sound when player walks indoors/outdoors
@@ -563,6 +569,19 @@ public class CyclesPlugin extends Plugin
 			case GAMEBREAKING:
 				return 1;
 		}
+	}
+
+	public int getMaxVolume(boolean muffled)
+	{
+		double weatherDensityFactor = getWeatherDensityFactor();
+		double volumeDouble = config.ambientVolume() * weatherDensityFactor;
+
+		if (muffled)
+		{
+			volumeDouble = config.muffledVolume() * weatherDensityFactor;
+		}
+
+		return (int) volumeDouble;
 	}
 
 	public void createWeatherManager()
