@@ -1,4 +1,4 @@
-package com.weather3d;
+package com.weather3d.audio;
 
 import lombok.Getter;
 

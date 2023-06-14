@@ -1,5 +1,8 @@
 package com.weather3d;
 
+import com.weather3d.conditions.Biomes;
+import com.weather3d.conditions.Seasons;
+import com.weather3d.conditions.Weathers;
 import net.runelite.api.Client;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -40,9 +43,9 @@ public class CyclesOverlay extends OverlayPanel
             return null;
         }
 
-        Condition currentWeather = plugin.getCurrentWeather();
-        Condition currentBiome = plugin.getCurrentBiome();
-        Condition currentSeason = plugin.getCurrentSeason();
+        Weathers currentWeather = plugin.getCurrentWeather();
+        Biomes currentBiome = plugin.getCurrentBiome();
+        Seasons currentSeason = plugin.getCurrentSeason();
 
         panelComponent.setBackgroundColor(new Color(0, 0, 0, 0));
         graphics.setFont(RUNESCAPE_SMALL_FONT);

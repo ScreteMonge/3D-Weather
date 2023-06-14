@@ -1,5 +1,8 @@
-package com.weather3d;
+package com.weather3d.audio;
 
+import com.weather3d.CyclesConfig;
+import com.weather3d.CyclesPlugin;
+import com.weather3d.audio.SoundEffect;
 import jaco.mp3.player.MP3Player;
 import lombok.Getter;
 import lombok.Setter;
