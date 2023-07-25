@@ -290,7 +290,11 @@ public class CyclesPlugin extends Plugin
 				{
 					for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
 					{
-						int volumeMax = getMaxVolume(soundPlayer.getCurrentTrack().isMuffled());
+						SoundEffect currentTrack = soundPlayer.getCurrentTrack();
+						if (currentTrack == null)
+							continue;
+
+						int volumeMax = getMaxVolume(currentTrack.isMuffled());
 						if (soundPlayer.getCurrentVolume() > volumeMax)
 							soundPlayer.setVolumeLevel(volumeMax);
 					}
@@ -689,6 +693,8 @@ public class CyclesPlugin extends Plugin
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 		Animation weatherAnimation = modelHandler.getWeatherAnimation(weatherCondition);
 		int alternate = 1;
+		if (availableTiles.isEmpty())
+			updateAvailableTiles();
 
 		for (int i = 0; i < objects; i++)
 		{
