@@ -60,8 +60,8 @@ public class CyclesPlugin extends Plugin
 
 	private final Random random = new Random();
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
-	private ArrayList<Tile> availableFogTiles = new ArrayList<>();
-	private ArrayList<Tile> availableTiles = new ArrayList<>();
+	//private ArrayList<Tile> availableFogTiles = new ArrayList<>();
+	//private ArrayList<Tile> availableTiles = new ArrayList<>();
 	private boolean loadedAnimsModels = false;
 	private boolean conditionsSynced = false;
 	private boolean isPlayerIndoors = false;
@@ -173,7 +173,7 @@ public class CyclesPlugin extends Plugin
 
 		isPlayerIndoors = true;
 		WorldPoint playerLoc = client.getLocalPlayer().getWorldLocation();
-		for (Tile t : availableTiles)
+		for (Tile t : getAvailableTiles())
 		{
 			if (t.getWorldLocation().getX() == playerLoc.getX() && t.getWorldLocation().getY() == playerLoc.getY())
 			{
@@ -229,7 +229,6 @@ public class CyclesPlugin extends Plugin
 		if (gameState != GameState.LOGGED_IN)
 			return;
 
-		updateAvailableTiles();
 		syncBiome();
 		syncSeason();
 		setConfigWeather();
@@ -693,8 +692,7 @@ public class CyclesPlugin extends Plugin
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 		Animation weatherAnimation = modelHandler.getWeatherAnimation(weatherCondition);
 		int alternate = 1;
-		if (availableTiles.isEmpty())
-			updateAvailableTiles();
+		ArrayList<Tile> availableTiles = getAvailableTiles();
 
 		for (int i = 0; i < objects; i++)
 		{
@@ -702,10 +700,13 @@ public class CyclesPlugin extends Plugin
 			Tile openTile;
 			switch (weatherCondition)
 			{
+				/*
 				case FOGGY:
 					roll = random.nextInt(availableFogTiles.size());
 					openTile = availableFogTiles.get(roll);
 					break;
+
+				 */
 				default:
 					roll = random.nextInt(availableTiles.size());
 					openTile = availableTiles.get(roll);
@@ -770,6 +771,7 @@ public class CyclesPlugin extends Plugin
 		int beginRotation = weatherManager.getStartRotation();
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 		Weathers weather = weatherManager.getWeatherType();
+		ArrayList<Tile> availableTiles = getAvailableTiles();
 
 		for (int i = beginRotation; i < beginRotation + numToRelocate; i++)
 		{
@@ -777,10 +779,13 @@ public class CyclesPlugin extends Plugin
 			Tile nextTile;
 			switch (weather)
 			{
+				/*
 				case FOGGY:
 					roll = random.nextInt(availableFogTiles.size());
 					nextTile = availableFogTiles.get(roll);
 					break;
+
+				 */
 				default:
 					roll = random.nextInt(availableTiles.size());
 					nextTile = availableTiles.get(roll);
@@ -837,14 +842,13 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
-	public void updateAvailableTiles()
+	public ArrayList<Tile> getAvailableTiles()
 	{
-		availableTiles.clear();
-		availableFogTiles.clear();
 		Scene scene = client.getScene();
 		Tile[][][] tiles = scene.getTiles();
 		byte[][][] settings = client.getTileSettings();
 		int zLayer = client.getPlane();
+		ArrayList<Tile> availableTiles = new ArrayList<>();
 
 		for (int z = 0; z <= zLayer; z++)
 		{
@@ -863,13 +867,17 @@ public class CyclesPlugin extends Plugin
 
 					availableTiles.add(tile);
 
+					/*
 					if (wallCollision(tile))
 						continue;
 
 					availableFogTiles.add(tile);
+
+					 */
 				}
 			}
 		}
+		return availableTiles;
 	}
 
 	private boolean wallCollision(Tile targetTile)
