@@ -2,7 +2,6 @@ package com.weather3d.conditions;
 
 import com.weather3d.WeatherObject;
 import com.weather3d.audio.SoundPlayer;
-import com.weather3d.conditions.Weathers;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,7 +13,7 @@ import java.util.ArrayList;
 @AllArgsConstructor
 public class WeatherManager
 {
-    private Weathers weatherType;
+    private Weather weatherType;
     private SoundPlayer[] soundPlayers;
     private int soundPlayerTimer;
     private ArrayList<WeatherObject> weatherObjArray;

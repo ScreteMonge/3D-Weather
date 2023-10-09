@@ -18,14 +18,6 @@ public interface CyclesConfig extends Config {
 		STORMY
 	}
 
-	enum WeatherDensity {
-		LOW,
-		MEDIUM,
-		HIGH,
-		EXTREME,
-		GAMEBREAKING
-	}
-
 	enum SeasonType {
 		DYNAMIC,
 		SPRING,
@@ -66,27 +58,27 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
-			keyName = "weatherDensity",
-			name = "Weather Density",
-			description = "Determines density of Weather objects (lower is better for performance)",
-			section = generalSettings,
-			position = 3
-	)
-	default WeatherDensity weatherDensity()
-	{
-		return WeatherDensity.MEDIUM;
-	}
-
-	@ConfigItem(
 			keyName = "toggleOverlay",
 			name = "Enable Overlay",
 			description = "Displays an overlay indicating Weather, Biome, and Season",
 			section = generalSettings,
-			position = 4
+			position = 3
 	)
 	default boolean toggleOverlay()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+			keyName = "miniOverlay",
+			name = "Enable Mini Overlay",
+			description = "Displays a mini overlay indicating Weather, Biome, and Season",
+			section = generalSettings,
+			position = 4
+	)
+	default boolean miniOverlay()
+	{
+		return false;
 	}
 
 	@ConfigItem(
@@ -162,17 +154,80 @@ public interface CyclesConfig extends Config {
 
 	@ConfigSection(
 			name = "Weathers",
-			description = "Weather toggles",
+			description = "Weather Options",
 			position = 11
 	)
 	String weatherToggles = "weatherToggles";
 
 	@ConfigItem(
-			keyName = "enableClouds",
-			name = "Enable Clouds",
-			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
+			keyName = "enableRain",
+			name = "Rain Enabled",
+			description = "Allows Rain objects to appear while Rainy or Stormy",
 			section = weatherToggles,
 			position = 12
+	)
+	default boolean enableRain()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "rainDensity",
+			name = "Rain Density",
+			description = "Sets the number of Rain objects that spawn while Rainy",
+			section = weatherToggles,
+			position = 13
+	)
+	@Range(max = 2000)
+	default int rainDensity()
+	{
+		return 400;
+	}
+
+	@ConfigItem(
+			keyName = "stormDensity",
+			name = "Storm Density",
+			description = "Sets the number of Rain objects that spawn while Stormy",
+			section = weatherToggles,
+			position = 14
+	)
+	@Range(max = 3000)
+	default int stormDensity()
+	{
+		return 600;
+	}
+
+	@ConfigItem(
+			keyName = "enableSnow",
+			name = "Snow Enabled",
+			description = "Allows Snow objects to appear while Snowy",
+			section = weatherToggles,
+			position = 15
+	)
+	default boolean enableSnow()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "snowDensity",
+			name = "Snow Density",
+			description = "Sets the number of Snow objects that spawn while Snowy",
+			section = weatherToggles,
+			position = 16
+	)
+	@Range(max = 2000)
+	default int snowDensity()
+	{
+		return 400;
+	}
+
+	@ConfigItem(
+			keyName = "enableClouds",
+			name = "Clouds Enabled",
+			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
+			section = weatherToggles,
+			position = 17
 	)
 	default boolean enableClouds()
 	{
@@ -180,11 +235,62 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "cloudyDensity",
+			name = "Cloud Density",
+			description = "Sets the number of Cloud objects that spawn while Cloudy",
+			section = weatherToggles,
+			position = 18
+	)
+	@Range(max = 1000)
+	default int cloudyDensity()
+	{
+		return 200;
+	}
+
+	@ConfigItem(
+			keyName = "partlyCloudyDensity",
+			name = "Partly Cloudy Density",
+			description = "Sets the number of Cloud objects that spawn while Partly Cloudy",
+			section = weatherToggles,
+			position = 19
+	)
+	@Range(max = 300)
+	default int partlyCloudyDensity()
+	{
+		return 50;
+	}
+
+	@ConfigItem(
+			keyName = "enableAsh",
+			name = "Ash Enabled",
+			description = "Allows Ash objects to appear while in Ashfall",
+			section = weatherToggles,
+			position = 20
+	)
+	default boolean enableAsh()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "ashfallDensity",
+			name = "Ashfall Density",
+			description = "Sets the number of Ash objects that spawn while in Ashfall",
+			section = weatherToggles,
+			position = 21
+	)
+	@Range(max = 1200)
+	default int ashfallDensity()
+	{
+		return 200;
+	}
+
+	@ConfigItem(
 			keyName = "enableFog",
-			name = "Enable Fog",
+			name = "Fog Enabled",
 			description = "Allows Fog objects to appear while Foggy",
 			section = weatherToggles,
-			position = 13
+			position = 22
 	)
 	default boolean enableFog()
 	{
@@ -192,11 +298,24 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "foggyDensity",
+			name = "Fog Density",
+			description = "Sets the number of Fog objects that spawn while Foggy",
+			section = weatherToggles,
+			position = 23
+	)
+	@Range(max = 1800)
+	default int foggyDensity()
+	{
+		return 500;
+	}
+
+	@ConfigItem(
 			keyName = "enableStars",
-			name = "Enable Stars",
+			name = "Stars Enabled",
 			description = "Allows Star objects to appear while in other Realms",
 			section = weatherToggles,
-			position = 14
+			position = 24
 	)
 	default boolean enableStars()
 	{
@@ -204,11 +323,24 @@ public interface CyclesConfig extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "starryDensity",
+			name = "Stars Density",
+			description = "Sets the number of Star objects that spawn while Starry",
+			section = weatherToggles,
+			position = 25
+	)
+	@Range(max = 2000)
+	default int starryDensity()
+	{
+		return 400;
+	}
+
+	@ConfigItem(
 			keyName = "enableWintertodtSnow",
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
 			section = weatherToggles,
-			position = 15
+			position = 26
 	)
 	default boolean enableWintertodtSnow()
 	{
@@ -220,7 +352,7 @@ public interface CyclesConfig extends Config {
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
 			section = weatherToggles,
-			position = 16
+			position = 27
 	)
 	default boolean enableLightning()
 	{
@@ -230,7 +362,7 @@ public interface CyclesConfig extends Config {
 	@ConfigSection(
 			name = "Other",
 			description = "Other Settings",
-			position = 17
+			position = 28
 	)
 	String otherSettings = "otherSettings";
 
@@ -239,7 +371,7 @@ public interface CyclesConfig extends Config {
 			name = "Allow 117 Winter Theme Override",
 			description = "Allows 117HD Winter Theme to override current Season",
 			section = otherSettings,
-			position = 18
+			position = 29
 	)
 	default boolean winterTheme()
 	{

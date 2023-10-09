@@ -1,6 +1,6 @@
 package com.weather3d;
 
-import com.weather3d.conditions.Weathers;
+import com.weather3d.conditions.Weather;
 import lombok.Getter;
 import net.runelite.api.*;
 
@@ -177,7 +177,7 @@ public class ModelHandler
         starAnimation = client.loadAnimation(STAR_ANIMATION);
     }
 
-    public Model getWeatherModel(Weathers currentWeather, int alternative)
+    public Model getWeatherModel(Weather currentWeather, int alternative)
     {
         switch (currentWeather)
         {
@@ -204,7 +204,7 @@ public class ModelHandler
                     case 3:
                         return cloudModel3;
                 }
-            case COSMOS:
+            case STARRY:
                 switch(alternative)
                 {
                     default:
@@ -217,7 +217,7 @@ public class ModelHandler
                 }
             case FOGGY:
                 return fogModel;
-            case SNOWING:
+            case SNOWY:
                 switch (alternative)
                 {
                     default:
@@ -228,7 +228,7 @@ public class ModelHandler
                     case 3:
                         return snowModel3;
                 }
-            case RAINING:
+            case RAINY:
                 switch (alternative)
                 {
                     default:
@@ -239,7 +239,7 @@ public class ModelHandler
                     case 3:
                         return rainModel3;
                 }
-            case STORM:
+            case STORMY:
                 switch (alternative)
                 {
                     default:
@@ -257,7 +257,7 @@ public class ModelHandler
         }
     }
 
-    public Animation getWeatherAnimation(Weathers currentWeather)
+    public Animation getWeatherAnimation(Weather currentWeather)
     {
         switch (currentWeather)
         {
@@ -266,14 +266,14 @@ public class ModelHandler
             case CLOUDY:
             case PARTLY_CLOUDY:
                 return cloudAnimation;
-            case COSMOS:
+            case STARRY:
                 return starAnimation;
             case FOGGY:
                 return fogAnimation;
-            case SNOWING:
+            case SNOWY:
                 return snowAnimation;
-            case RAINING:
-            case STORM:
+            case RAINY:
+            case STORMY:
                 return rainAnimation;
             default:
             case COVERED:
@@ -282,7 +282,7 @@ public class ModelHandler
         }
     }
 
-    public Model getTransparentModel(Weathers weatherType, int objectVariant)
+    public Model getTransparentModel(Weather weatherType, int objectVariant)
     {
         switch (weatherType)
         {
@@ -299,7 +299,7 @@ public class ModelHandler
                     case 3:
                         return cloudModelTP3;
                 }
-            case COSMOS:
+            case STARRY:
                 switch (objectVariant)
                 {
                     default:
@@ -313,7 +313,7 @@ public class ModelHandler
         }
     }
 
-    public Model getRegularModel(Weathers weatherType, int objectVariant)
+    public Model getRegularModel(Weather weatherType, int objectVariant)
     {
         switch (weatherType)
         {
@@ -330,7 +330,7 @@ public class ModelHandler
                     case 3:
                         return cloudModel3;
                 }
-            case COSMOS:
+            case STARRY:
                 switch (objectVariant)
                 {
                     default:
@@ -344,16 +344,16 @@ public class ModelHandler
         }
     }
 
-    public int getModelRadius(Weathers weatherType)
+    public int getModelRadius(Weather weatherType)
     {
         switch (weatherType)
         {
             default:
             case ASHFALL:
-            case COSMOS:
-            case RAINING:
-            case STORM:
-            case SNOWING:
+            case STARRY:
+            case RAINY:
+            case STORMY:
+            case SNOWY:
                 return 60;
             case CLOUDY:
             case PARTLY_CLOUDY:

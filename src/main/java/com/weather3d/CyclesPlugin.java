@@ -7,9 +7,9 @@ import javax.swing.*;
 import com.weather3d.audio.SoundEffect;
 import com.weather3d.audio.SoundPlayer;
 import com.weather3d.conditions.WeatherManager;
-import com.weather3d.conditions.Biomes;
-import com.weather3d.conditions.Seasons;
-import com.weather3d.conditions.Weathers;
+import com.weather3d.conditions.Biome;
+import com.weather3d.conditions.Season;
+import com.weather3d.conditions.Weather;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -60,8 +60,6 @@ public class CyclesPlugin extends Plugin
 
 	private final Random random = new Random();
 	private final ArrayList<WeatherManager> weatherManagerList = new ArrayList<>();
-	//private ArrayList<Tile> availableFogTiles = new ArrayList<>();
-	//private ArrayList<Tile> availableTiles = new ArrayList<>();
 	private boolean loadedAnimsModels = false;
 	private boolean conditionsSynced = false;
 	private boolean isPlayerIndoors = false;
@@ -77,11 +75,11 @@ public class CyclesPlugin extends Plugin
 	private final int FOG_RADIUS = 100;
 
 	@Getter
-	private Seasons currentSeason = Seasons.SPRING;
+	private Season currentSeason = Season.SPRING;
 	@Getter
-	private Biomes currentBiome = Biomes.GRASSLAND;
+	private Biome currentBiome = Biome.GRASSLAND;
 	@Getter
-	private Weathers currentWeather;
+	private Weather currentWeather;
 
 	@Override
 	protected void startUp() throws Exception
@@ -111,11 +109,11 @@ public class CyclesPlugin extends Plugin
 	{
 		for (WeatherManager weatherManager : weatherManagerList)
 		{
-			Weathers weatherType = weatherManager.getWeatherType();
+			Weather weatherType = weatherManager.getWeatherType();
 
-			if (weatherType == Weathers.CLOUDY
-					|| weatherType == Weathers.PARTLY_CLOUDY
-					|| weatherType == Weathers.COSMOS)
+			if (weatherType == Weather.CLOUDY
+					|| weatherType == Weather.PARTLY_CLOUDY
+					|| weatherType == Weather.STARRY)
 			{
 				LocalPoint localPoint = new LocalPoint(client.getCameraX(), client.getCameraY());
 
@@ -183,7 +181,7 @@ public class CyclesPlugin extends Plugin
 
 		if (config.weatherType() == CyclesConfig.WeatherType.DYNAMIC)
 		{
-			Weathers nextWeather = syncWeather(currentSeason, currentBiome);
+			Weather nextWeather = syncWeather(currentSeason, currentBiome);
 
 			if (nextWeather != currentWeather)
 			{
@@ -245,62 +243,53 @@ public class CyclesPlugin extends Plugin
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		if (event.getKey().equals("weatherType"))
+		String key = event.getKey();
+
+		if (key.equals("weatherType"))
 		{
 			setConfigWeather();
 			handleWeatherManagers();
 			return;
 		}
 
-		if (event.getKey().equals("disableWeatherUnderground"))
+		if (key.equals("disableWeatherUnderground"))
 		{
 			if (!config.disableWeatherUnderground())
 				return;
 
-			if (currentBiome == Biomes.CAVE || currentBiome == Biomes.LAVA_CAVE)
+			if (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE)
 				clientThread.invoke(this::clearAllWeatherManagers);
 		}
 
-		if (event.getKey().equals("seasonType"))
+		if (key.equals("seasonType"))
 		{
 			syncSeason();
 			return;
 		}
 
-		if (event.getKey().equals("weatherDensity"))
-		{
-			for (WeatherManager weatherManager : weatherManagerList)
-			{
-				Weathers weatherType = weatherManager.getWeatherType();
+		if (key.equals("ashfallDensity"))
+			handleConfigDensityChange(Weather.ASHFALL, Integer.parseInt(event.getNewValue()));
 
-				if (weatherType.isHasPrecipitation())
-				{
-					ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
+		if (key.equals("rainDensity"))
+			handleConfigDensityChange(Weather.RAINY, Integer.parseInt(event.getNewValue()));
 
-					clientThread.invoke(() -> {
-						while (array.size() > getMaxWeatherObjects(weatherType))
-						{
-							removeWeatherObject(0, array);
-						}
-					});
-				}
+		if (key.equals("stormDensity"))
+			handleConfigDensityChange(Weather.STORMY, Integer.parseInt(event.getNewValue()));
 
-				if (weatherType.isHasSound())
-				{
-					for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
-					{
-						SoundEffect currentTrack = soundPlayer.getCurrentTrack();
-						if (currentTrack == null)
-							continue;
+		if (key.equals("snowDensity"))
+			handleConfigDensityChange(Weather.SNOWY, Integer.parseInt(event.getNewValue()));
 
-						int volumeMax = getMaxVolume(currentTrack.isMuffled());
-						if (soundPlayer.getCurrentVolume() > volumeMax)
-							soundPlayer.setVolumeLevel(volumeMax);
-					}
-				}
-			}
-			return;
-		}
+		if (key.equals("partlyCloudyDensity"))
+			handleConfigDensityChange(Weather.PARTLY_CLOUDY, Integer.parseInt(event.getNewValue()));
+
+		if (key.equals("cloudyDensity"))
+			handleConfigDensityChange(Weather.CLOUDY, Integer.parseInt(event.getNewValue()));
+
+		if (key.equals("foggyDensity"))
+			handleConfigDensityChange(Weather.FOGGY, Integer.parseInt(event.getNewValue()));
+
+		if (key.equals("starryDensity"))
+			handleConfigDensityChange(Weather.STARRY, Integer.parseInt(event.getNewValue()));
 
 		if (event.getKey().equals("toggleOverlay"))
 		{
@@ -332,58 +321,35 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
-		if (event.getKey().equals("enableClouds"))
+		if (key.equals("enableRain"))
 		{
-			if (config.enableClouds())
-				return;
-
-			for (WeatherManager weatherManager : weatherManagerList)
-			{
-				if (weatherManager.getWeatherType() == Weathers.CLOUDY || weatherManager.getWeatherType() == Weathers.PARTLY_CLOUDY)
-					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
-			}
-			return;
+			handleConfigEnableChange(Weather.RAINY, Boolean.getBoolean(event.getNewValue()));
+			handleConfigEnableChange(Weather.STORMY, Boolean.getBoolean(event.getNewValue()));
 		}
 
-		if (event.getKey().equals("enableFog"))
-		{
-			if (config.enableFog())
-				return;
+		if (key.equals("enableSnow"))
+			handleConfigEnableChange(Weather.SNOWY, Boolean.getBoolean(event.getNewValue()));
 
-			for (WeatherManager weatherManager : weatherManagerList)
-			{
-				if (weatherManager.getWeatherType() == Weathers.FOGGY)
-				{
-					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
-				}
-			}
-			return;
+		if (key.equals("enableClouds"))
+		{
+			handleConfigEnableChange(Weather.CLOUDY, Boolean.getBoolean(event.getNewValue()));
+			handleConfigEnableChange(Weather.PARTLY_CLOUDY, Boolean.getBoolean(event.getNewValue()));
 		}
 
-		if (event.getKey().equals("enableStars"))
-		{
-			if (config.enableStars())
-			{
-				return;
-			}
+		if (key.equals("enableAsh"))
+			handleConfigEnableChange(Weather.ASHFALL, Boolean.getBoolean(event.getNewValue()));
 
-			for (WeatherManager weatherManager : weatherManagerList)
-			{
-				if (weatherManager.getWeatherType() == Weathers.COSMOS)
-				{
-					clientThread.invoke(() -> clearWeatherObjects(weatherManager));
-					clientThread.invoke(weatherManager::stopManagerSoundPlayers);
-				}
-			}
-			return;
-		}
+		if (key.equals("enableFog"))
+			handleConfigEnableChange(Weather.FOGGY, Boolean.getBoolean(event.getNewValue()));
+
+		if (key.equals("enableStars"))
+			handleConfigEnableChange(Weather.STARRY, Boolean.getBoolean(event.getNewValue()));
+
 
 		if (event.getKey().equals("enableWintertodtSnow"))
 		{
 			if (config.enableWintertodtSnow())
-			{
 				return;
-			}
 
 			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 
@@ -391,11 +357,62 @@ public class CyclesPlugin extends Plugin
 			{
 				for (WeatherManager weatherManager : weatherManagerList)
 				{
-					if (weatherManager.getWeatherType() == Weathers.SNOWING)
+					if (weatherManager.getWeatherType() == Weather.SNOWY)
 					{
 						clientThread.invoke(() -> clearWeatherObjects(weatherManager));
 						clientThread.invoke(weatherManager::stopManagerSoundPlayers);
 					}
+				}
+			}
+		}
+	}
+
+	private void handleConfigEnableChange(Weather weather, boolean enabled)
+	{
+		if (enabled)
+			return;
+
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			if (weatherManager.getWeatherType() == weather)
+			{
+				clientThread.invoke(() -> clearWeatherObjects(weatherManager));
+				clientThread.invoke(weatherManager::stopManagerSoundPlayers);
+			}
+		}
+	}
+
+	private void handleConfigDensityChange(Weather weatherType, int newDensity)
+	{
+		for (WeatherManager weatherManager : weatherManagerList)
+		{
+			Weather weather = weatherManager.getWeatherType();
+			if (weather != weatherType)
+				continue;
+
+			if (weather.isHasPrecipitation())
+			{
+				ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
+
+				clientThread.invoke(() -> {
+					while (array.size() > newDensity)
+					{
+						removeWeatherObject(0, array);
+					}
+				});
+			}
+
+			if (weather.isHasSound())
+			{
+				for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
+				{
+					SoundEffect currentTrack = soundPlayer.getCurrentTrack();
+					if (currentTrack == null)
+						continue;
+
+					int volumeMax = getMaxVolume(currentTrack.isMuffled(), weather);
+					if (soundPlayer.getCurrentVolume() > volumeMax)
+						soundPlayer.setVolumeLevel(volumeMax);
 				}
 			}
 		}
@@ -429,16 +446,16 @@ public class CyclesPlugin extends Plugin
 			}
 		}
 
-		Weathers weatherCondition = weatherManager.getWeatherType();
+		Weather weather = weatherManager.getWeatherType();
 
-		if (!weatherCondition.isHasSound() || !config.toggleAmbience())
+		if (!weather.isHasSound() || !config.toggleAmbience())
 			return;
 
-		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biomes.CAVE || currentBiome == Biomes.LAVA_CAVE))
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
 			return;
 
 		//Fade out inappropriate weathermanager soundplayers
-		if (weatherCondition != currentWeather)
+		if (weather != currentWeather)
 		{
 			for (SoundPlayer sp : weatherManager.getSoundPlayers())
 			{
@@ -495,10 +512,8 @@ public class CyclesPlugin extends Plugin
 			appropriateSound = outdoorSound;
 		}
 
-
-		double maxWeatherObjects = getMaxWeatherObjects(weatherCondition);
-		double volumeDouble = (weatherManager.getWeatherObjArray().size() / maxWeatherObjects) * getMaxVolume(muffled);
-		int volumeGoal = (int) volumeDouble;
+		int currentObjects = weatherManager.getWeatherObjArray().size();
+		int volumeGoal = getMaxVolume(muffled, weather);
 
 		// Make sure the primary soundplayer is at the right volume, if it's not already fading in or whatever
 		SoundPlayer primary = weatherManager.getPrimarySoundPlayer();
@@ -515,9 +530,9 @@ public class CyclesPlugin extends Plugin
 		// Initialize the primary soundplayer if it ain't initialized yet, or is not playing for some reason
 		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
 		{
-			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor()));
+			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor(currentObjects, weather)));
 			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
-			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(getMaxVolume(muffled), 12000);
+			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(getMaxVolume(muffled, weather), 12000);
 			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
 		}
 		//Handle looping, as well as muffling/unmuffling of sound when player walks indoors/outdoors
@@ -534,36 +549,80 @@ public class CyclesPlugin extends Plugin
 			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, 6000);
 		}
 
-		if (weatherCondition == Weathers.STORM && (weatherManager.getPrimarySoundPlayer().getTimer() == 90 || weatherManager.getPrimarySoundPlayer().getTimer() == 138))
+		if (weather == Weather.STORMY && (weatherManager.getPrimarySoundPlayer().getTimer() == 90 || weatherManager.getPrimarySoundPlayer().getTimer() == 138))
 			flashLightning = true;
 	}
 
-	public double getWeatherDensityFactor()
+	public int getObjectTarget(Weather weather)
 	{
-		switch (config.weatherDensity())
+		switch (weather)
 		{
-			case LOW:
-				return 0.5;
+			case ASHFALL:
+				return config.ashfallDensity();
+			case FOGGY:
+				return config.foggyDensity();
+			case RAINY:
+				return config.rainDensity();
+			case SNOWY:
+				return config.snowDensity();
+			case CLOUDY:
+				return config.cloudyDensity();
+			case STARRY:
+				return config.starryDensity();
+			case STORMY:
+				return config.stormDensity();
+			case PARTLY_CLOUDY:
+				return config.partlyCloudyDensity();
 			default:
-			case MEDIUM:
-				return 0.65;
-			case HIGH:
-				return 0.85;
-			case EXTREME:
-			case GAMEBREAKING:
-				return 1;
+			case SUNNY:
+			case COVERED:
+				return 0;
 		}
 	}
 
-	public int getMaxVolume(boolean muffled)
+	public double getWeatherDensityFactor(int maxObjects, Weather weather)
 	{
-		double weatherDensityFactor = getWeatherDensityFactor();
+		double factor = (double) maxObjects / (double) weather.getMaxObjectVolume();
+		if (factor > 1)
+			factor = 1;
+
+		return factor;
+	}
+
+	public int getMaxVolume(boolean muffled, Weather weather)
+	{
+		double weatherDensityFactor = getWeatherDensityFactor(weather.getMaxObjects(), weather);
 		double volumeDouble = config.ambientVolume() * weatherDensityFactor;
 
 		if (muffled)
 			volumeDouble = config.muffledVolume() * weatherDensityFactor;
 
 		return (int) volumeDouble;
+	}
+
+	public boolean weatherEnabled(Weather weather)
+	{
+		switch (weather)
+		{
+			case ASHFALL:
+				return config.enableAsh();
+			case FOGGY:
+				return config.enableFog();
+			case RAINY:
+			case STORMY:
+				return config.enableRain();
+			case SNOWY:
+				return config.enableSnow();
+			case CLOUDY:
+			case PARTLY_CLOUDY:
+				return config.enableClouds();
+			case STARRY:
+				return config.enableStars();
+			default:
+			case COVERED:
+			case SUNNY:
+				return true;
+		}
 	}
 
 	public void createWeatherManager()
@@ -575,7 +634,7 @@ public class CyclesPlugin extends Plugin
 
 	public void fadeWeatherManager(WeatherManager weatherManager)
 	{
-		int trimNumber = getMaxWeatherObjects(weatherManager.getWeatherType()) / OBJ_ROTATION_CONSTANT;
+		int trimNumber = weatherManager.getWeatherType().getMaxObjects() / OBJ_ROTATION_CONSTANT;
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
 		if (trimNumber < array.size() / OBJ_ROTATION_CONSTANT)
@@ -626,21 +685,15 @@ public class CyclesPlugin extends Plugin
 
 	public void handleWeatherChanges(WeatherManager weatherManager)
 	{
-		Weathers weather = weatherManager.getWeatherType();
+		Weather weather = weatherManager.getWeatherType();
 
-		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biomes.CAVE || currentBiome == Biomes.LAVA_CAVE))
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
 			return;
 
-		if ((weather == Weathers.CLOUDY || weather == Weathers.PARTLY_CLOUDY) && !config.enableClouds())
+		if (!weatherEnabled(weather))
 			return;
 
-		if (weather == Weathers.FOGGY && !config.enableFog())
-			return;
-
-		if (weather == Weathers.COSMOS && !config.enableStars())
-			return;
-
-		if (!config.enableWintertodtSnow() && weather == Weathers.SNOWING)
+		if (!config.enableWintertodtSnow() && weather == Weather.SNOWY)
 		{
 			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
 			if (playerChunk == WINTERTODT_CHUNK)
@@ -649,48 +702,30 @@ public class CyclesPlugin extends Plugin
 			}
 		}
 
-		int maxWeatherObj = getMaxWeatherObjects(weather);
+		int objectTarget = getObjectTarget(weather);
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
-		if (array.size() < maxWeatherObj)
+		if (array.size() < objectTarget)
 		{
 			if (zoneObjRecovery > 0)
 			{
-				relocateObjects(weatherManager, maxWeatherObj / (OBJ_ROTATION_CONSTANT / 2));
+				relocateObjects(weatherManager, objectTarget / (OBJ_ROTATION_CONSTANT / 2));
 				zoneObjRecovery--;
 			}
-			renderWeather(maxWeatherObj / OBJ_ROTATION_CONSTANT, weatherManager);
+			renderWeather(objectTarget / OBJ_ROTATION_CONSTANT, weatherManager);
 		}
-		else if (array.size() == maxWeatherObj && client.getTickCount() % weather.getChangeRate() == 0)
+		else if (array.size() == objectTarget && client.getTickCount() % weather.getChangeRate() == 0)
 		{
-			relocateObjects(weatherManager, maxWeatherObj / OBJ_ROTATION_CONSTANT);
-		}
-	}
-
-	public int getMaxWeatherObjects(Weathers weatherCondition)
-	{
-		switch(config.weatherDensity())
-		{
-			case LOW:
-				return weatherCondition.getObjLow();
-			default:
-			case MEDIUM:
-				return weatherCondition.getObjMed();
-			case HIGH:
-				return weatherCondition.getObjHigh();
-			case EXTREME:
-				return weatherCondition.getObjExtreme();
-			case GAMEBREAKING:
-				return weatherCondition.getObjGameCrashing();
+			relocateObjects(weatherManager, objectTarget / OBJ_ROTATION_CONSTANT);
 		}
 	}
 
 	private void renderWeather(int objects, WeatherManager weatherManager)
 	{
-		Weathers weatherCondition = weatherManager.getWeatherType();
+		Weather weather = weatherManager.getWeatherType();
 		int z = client.getPlane();
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
-		Animation weatherAnimation = modelHandler.getWeatherAnimation(weatherCondition);
+		Animation weatherAnimation = modelHandler.getWeatherAnimation(weather);
 		int alternate = 1;
 		ArrayList<Tile> availableTiles = getAvailableTiles();
 
@@ -698,36 +733,29 @@ public class CyclesPlugin extends Plugin
 		{
 			int roll;
 			Tile openTile;
-			switch (weatherCondition)
+			switch (weather)
 			{
-				/*
-				case FOGGY:
-					roll = random.nextInt(availableFogTiles.size());
-					openTile = availableFogTiles.get(roll);
-					break;
-
-				 */
 				default:
 					roll = random.nextInt(availableTiles.size());
 					openTile = availableTiles.get(roll);
 			}
 
-			WeatherObject weatherObject = createWeatherObject(weatherCondition, weatherAnimation, openTile.getLocalLocation(), z, alternate);
+			WeatherObject weatherObject = createWeatherObject(weather, weatherAnimation, openTile.getLocalLocation(), z, alternate);
 			alternate += 1;
-			if (alternate > weatherCondition.getModelVariety())
+			if (alternate > weather.getModelVariety())
 				alternate = 1;
 
 			array.add(weatherObject);
-			if (array.size() == getMaxWeatherObjects(weatherManager.getWeatherType()))
+			if (array.size() == getObjectTarget(weather))
 				return;
 		}
 	}
 
-	public WeatherObject createWeatherObject(Weathers weatherCondition, Animation weatherAnimation, LocalPoint lp, int plane, int objectVariant)
+	public WeatherObject createWeatherObject(Weather weather, Animation weatherAnimation, LocalPoint lp, int plane, int objectVariant)
 	{
 		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
-		Model weatherModel = modelHandler.getWeatherModel(weatherCondition, objectVariant);
-		int radius = modelHandler.getModelRadius(weatherCondition);
+		Model weatherModel = modelHandler.getWeatherModel(weather, objectVariant);
+		int radius = modelHandler.getModelRadius(weather);
 
 		runeLiteObject.setModel(weatherModel);
 		runeLiteObject.setRadius(radius);
@@ -770,7 +798,7 @@ public class CyclesPlugin extends Plugin
 		int z = client.getPlane();
 		int beginRotation = weatherManager.getStartRotation();
 		ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
-		Weathers weather = weatherManager.getWeatherType();
+		Weather weather = weatherManager.getWeatherType();
 		ArrayList<Tile> availableTiles = getAvailableTiles();
 
 		for (int i = beginRotation; i < beginRotation + numToRelocate; i++)
@@ -804,8 +832,7 @@ public class CyclesPlugin extends Plugin
 
 		weatherManager.setStartRotation(beginRotation + numToRelocate);
 
-		int maxWeatherObj = getMaxWeatherObjects(weather);
-		if (beginRotation > maxWeatherObj)
+		if (beginRotation > getObjectTarget(weather))
 			weatherManager.setStartRotation(0);
 	}
 
@@ -822,7 +849,7 @@ public class CyclesPlugin extends Plugin
 
 	public void handleZoneTransition()
 	{
-		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biomes.CAVE || currentBiome == Biomes.LAVA_CAVE))
+		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
 		{
 			clientThread.invoke(this::clearAllWeatherManagers);
 			return;
@@ -830,7 +857,7 @@ public class CyclesPlugin extends Plugin
 
 		for (WeatherManager weatherManager : weatherManagerList)
 		{
-			Weathers weatherType = weatherManager.getWeatherType();
+			Weather weatherType = weatherManager.getWeatherType();
 			ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 			int size = (int) (array.size() * 0.8);
 			clearWeatherObjects(weatherManager);
@@ -914,40 +941,40 @@ public class CyclesPlugin extends Plugin
 		switch(config.weatherType())
 		{
 			case ASHFALL:
-				currentWeather = Weathers.ASHFALL;
+				currentWeather = Weather.ASHFALL;
 				break;
 			default:
 			case DYNAMIC:
 				currentWeather = syncWeather(currentSeason, currentBiome);
 				break;
 			case CLOUDY:
-				currentWeather = Weathers.CLOUDY;
+				currentWeather = Weather.CLOUDY;
 				break;
 			case CLEAR:
-				currentWeather = Weathers.SUNNY;
+				currentWeather = Weather.SUNNY;
 				break;
 			case FOGGY:
-				currentWeather = Weathers.FOGGY;
+				currentWeather = Weather.FOGGY;
 				break;
 			case PARTLY_CLOUDY:
-				currentWeather = Weathers.PARTLY_CLOUDY;
+				currentWeather = Weather.PARTLY_CLOUDY;
 				break;
 			case RAINY:
-				currentWeather = Weathers.RAINING;
+				currentWeather = Weather.RAINY;
 				break;
 			case SNOWY:
-				currentWeather = Weathers.SNOWING;
+				currentWeather = Weather.SNOWY;
 				break;
 			case STARRY:
-				currentWeather = Weathers.COSMOS;
+				currentWeather = Weather.STARRY;
 				break;
 			case STORMY:
-				currentWeather = Weathers.STORM;
+				currentWeather = Weather.STORMY;
 				break;
 		}
 	}
 
-	private Weathers syncWeather(Seasons seasonCondition, Biomes biomeCondition)
+	private Weather syncWeather(Season seasonCondition, Biome biomeCondition)
 	{
 		int totalMin = CyclesClock.getTimeHours() * 60 + CyclesClock.getTimeMinutes();
 		int cycleSegment = (totalMin / 15) % 12;
@@ -958,7 +985,7 @@ public class CyclesPlugin extends Plugin
 				return forecast.getForecastArray()[cycleSegment];
 			}
 		}
-		return Weathers.COVERED;
+		return Weather.COVERED;
 	}
 
 	private void syncBiome()
@@ -972,9 +999,9 @@ public class CyclesPlugin extends Plugin
 			savedChunk = playerChunk;
 		}
 
-		if (winter117 && currentBiome != Biomes.CAVE && currentBiome != Biomes.LAVA_CAVE)
+		if (winter117 && currentBiome != Biome.CAVE && currentBiome != Biome.LAVA_CAVE)
 		{
-			currentBiome = Biomes.ARCTIC;
+			currentBiome = Biome.ARCTIC;
 			savedChunk = -1;
 		}
 	}
@@ -994,7 +1021,7 @@ public class CyclesPlugin extends Plugin
 						boolean winterTheme = configManager.getConfiguration("hd", "winterTheme0", Boolean.TYPE);
 						if (winterTheme)
 						{
-							currentSeason = Seasons.WINTER;
+							currentSeason = Season.WINTER;
 							winter117 = true;
 							return;
 						}
@@ -1013,29 +1040,29 @@ public class CyclesPlugin extends Plugin
 				{
 					default:
 					case 0:
-						currentSeason = Seasons.SPRING;
+						currentSeason = Season.SPRING;
 						return;
 					case 1:
-						currentSeason = Seasons.SUMMER;
+						currentSeason = Season.SUMMER;
 						return;
 					case 2:
-						currentSeason = Seasons.AUTUMN;
+						currentSeason = Season.AUTUMN;
 						return;
 					case 3:
-						currentSeason = Seasons.WINTER;
+						currentSeason = Season.WINTER;
 						return;
 				}
 			case SPRING:
-				currentSeason =  Seasons.SPRING;
+				currentSeason =  Season.SPRING;
 				return;
 			case SUMMER:
-				currentSeason =  Seasons.SUMMER;
+				currentSeason =  Season.SUMMER;
 				return;
 			case AUTUMN:
-				currentSeason =  Seasons.AUTUMN;
+				currentSeason =  Season.AUTUMN;
 				return;
 			case WINTER:
-				currentSeason =  Seasons.WINTER;
+				currentSeason =  Season.WINTER;
 		}
 	}
 

@@ -87,34 +87,43 @@ public class SoundPlayer
         return trackPlayer.getVolume();
     }
 
-    public void smoothVolumeChange(int endVolume, int milliseconds){
+    public void smoothVolumeChange(int endVolume, int milliseconds)
+    {
         if (volumeChangeHandler != null )
             volumeChangeHandler.interrupt();
-        volumeChangeHandler = new Thread(() -> {
-            try {
+
+        volumeChangeHandler = new Thread(() ->
+        {
+            try
+            {
                 int startVolume = getCurrentVolume();
                 long startTime = System.currentTimeMillis();
                 long endTime = startTime + milliseconds;
-                while (System.currentTimeMillis() < endTime){
+                while (System.currentTimeMillis() < endTime)
+                {
                     double percentProgress = ((double)(System.currentTimeMillis() - startTime))/ (endTime - startTime);
+
                     int newVolume = (int)(startVolume +  sigmoid(percentProgress) * (endVolume - startVolume));
                     setVolumeLevel(newVolume);
                     Thread.sleep(100);
                 }
                 setVolumeLevel(endVolume);
-                if (endVolume == 0) {
+                if (endVolume == 0)
+                {
                     setFading(false);
                     stopClip();
                 }
             }
-            catch (InterruptedException e){
+            catch (InterruptedException e)
+            {
                 return;
             }
         });
         volumeChangeHandler.start();
     }
 
-    private double sigmoid(double percentProgress) {
+    private double sigmoid(double percentProgress)
+    {
         percentProgress = percentProgress * Math.E * 4;
         return (Math.exp(percentProgress - Math.E * 2))/(Math.exp(percentProgress - Math.E * 2) + 1);
     }
@@ -122,14 +131,10 @@ public class SoundPlayer
     public void setVolumeLevel(int volume)
     {
         if (volume < 0)
-        {
             volume = 0;
-        }
 
         if (volume > 100)
-        {
             volume = 100;
-        }
 
         trackPlayer.setVolume(volume);
     }
