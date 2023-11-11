@@ -268,28 +268,28 @@ public class CyclesPlugin extends Plugin
 		}
 
 		if (key.equals("ashfallDensity"))
-			handleConfigDensityChange(Weather.ASHFALL, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.ASHFALL, config.ashfallDensity());
 
 		if (key.equals("rainDensity"))
-			handleConfigDensityChange(Weather.RAINY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.RAINY, config.rainDensity());
 
 		if (key.equals("stormDensity"))
-			handleConfigDensityChange(Weather.STORMY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.STORMY, config.stormDensity());
 
 		if (key.equals("snowDensity"))
-			handleConfigDensityChange(Weather.SNOWY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.SNOWY, config.snowDensity());
 
 		if (key.equals("partlyCloudyDensity"))
-			handleConfigDensityChange(Weather.PARTLY_CLOUDY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.PARTLY_CLOUDY, config.partlyCloudyDensity());
 
 		if (key.equals("cloudyDensity"))
-			handleConfigDensityChange(Weather.CLOUDY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.CLOUDY, config.cloudyDensity());
 
 		if (key.equals("foggyDensity"))
-			handleConfigDensityChange(Weather.FOGGY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.FOGGY, config.foggyDensity());
 
 		if (key.equals("starryDensity"))
-			handleConfigDensityChange(Weather.STARRY, Integer.parseInt(event.getNewValue()));
+			handleConfigDensityChange(Weather.STARRY, config.starryDensity());
 
 		if (event.getKey().equals("toggleOverlay"))
 		{
@@ -401,20 +401,6 @@ public class CyclesPlugin extends Plugin
 					}
 				});
 			}
-
-			if (weather.isHasSound())
-			{
-				for (SoundPlayer soundPlayer : weatherManager.getSoundPlayers())
-				{
-					SoundEffect currentTrack = soundPlayer.getCurrentTrack();
-					if (currentTrack == null)
-						continue;
-
-					int volumeMax = getMaxVolume(currentTrack.isMuffled(), weather);
-					if (soundPlayer.getCurrentVolume() > volumeMax)
-						soundPlayer.setVolumeLevel(volumeMax);
-				}
-			}
 		}
 	}
 
@@ -512,44 +498,48 @@ public class CyclesPlugin extends Plugin
 			appropriateSound = outdoorSound;
 		}
 
-		int currentObjects = weatherManager.getWeatherObjArray().size();
-		int volumeGoal = getMaxVolume(muffled, weather);
+
 
 		// Make sure the primary soundplayer is at the right volume, if it's not already fading in or whatever
 		SoundPlayer primary = weatherManager.getPrimarySoundPlayer();
-		if (primary.getCurrentTrack() != null && primary.getCurrentVolume() != volumeGoal)
+		int currentObjects = weatherManager.getWeatherObjArray().size();
+		int currentVolume = primary.getCurrentVolume();
+		int volumeGoal = getVolumeGoal(muffled, weather);
+		int changeRate = 6000;
+
+		if (primary.getCurrentTrack() != null && currentVolume != volumeGoal)
 		{
 			//If the volume change handler is uninitialized, or is initialized and isn't currently changing the volume
 			if (primary.getVolumeChangeHandler() == null || !primary.getVolumeChangeHandler().isAlive())
 			{
 				log.debug("Primary at wrong volume. Setting back to " + volumeGoal);
-				primary.smoothVolumeChange(volumeGoal, 6000);
+				primary.smoothVolumeChange(volumeGoal, changeRate);
 			}
 		}
 
 		// Initialize the primary soundplayer if it ain't initialized yet, or is not playing for some reason
-		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
+		if (primary.getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
 		{
-			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor(currentObjects, weather)));
-			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
-			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(getMaxVolume(muffled, weather), 12000);
-			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
+			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor(weather)));
+			primary.setVolumeLevel(0);
+			primary.smoothVolumeChange(volumeGoal, changeRate);
+			primary.playClip(appropriateSound);
 		}
 		//Handle looping, as well as muffling/unmuffling of sound when player walks indoors/outdoors
-		else if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() != appropriateSound || weatherManager.getPrimarySoundPlayer().getTimer() > 230)
+		else if (primary.getCurrentTrack() != appropriateSound || primary.getTimer() > 230)
 		{
-			log.debug("Looping because " + weatherManager.getPrimarySoundPlayer().getCurrentTrack() + " != " + appropriateSound + " or it was just time to loop");
-			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(0, 6000);
+			log.debug("Looping because " + primary.getCurrentTrack() + " != " + appropriateSound + " or it was just time to loop");
+			primary.smoothVolumeChange(0, changeRate);
 			weatherManager.switchSoundPlayerPriority();
-			if (!weatherManager.getPrimarySoundPlayer().isPlaying())
+			if (!primary.isPlaying())
 			{
-				weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
-				weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
+				primary.setVolumeLevel(0);
+				primary.playClip(appropriateSound);
 			}
-			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, 6000);
+			primary.smoothVolumeChange(volumeGoal, changeRate);
 		}
 
-		if (weather == Weather.STORMY && (weatherManager.getPrimarySoundPlayer().getTimer() == 90 || weatherManager.getPrimarySoundPlayer().getTimer() == 138))
+		if (weather == Weather.STORMY && (primary.getTimer() == 90 || primary.getTimer() == 138))
 			flashLightning = true;
 	}
 
@@ -580,24 +570,24 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
-	public double getWeatherDensityFactor(int maxObjects, Weather weather)
+	public int getVolumeGoal(boolean muffled, Weather weather)
 	{
-		double factor = (double) maxObjects / (double) weather.getMaxObjectVolume();
-		if (factor > 1)
-			factor = 1;
-
-		return factor;
-	}
-
-	public int getMaxVolume(boolean muffled, Weather weather)
-	{
-		double weatherDensityFactor = getWeatherDensityFactor(weather.getMaxObjects(), weather);
+		double weatherDensityFactor = getWeatherDensityFactor(weather);
 		double volumeDouble = config.ambientVolume() * weatherDensityFactor;
 
 		if (muffled)
 			volumeDouble = config.muffledVolume() * weatherDensityFactor;
 
 		return (int) volumeDouble;
+	}
+
+	public double getWeatherDensityFactor(Weather weather)
+	{
+		double factor = (double) weather.getMaxObjects() / (double) weather.getMaxObjectVolume();
+		if (factor > 1)
+			factor = 1;
+
+		return factor;
 	}
 
 	public boolean weatherEnabled(Weather weather)
@@ -1008,7 +998,7 @@ public class CyclesPlugin extends Plugin
 
 	private void syncSeason()
 	{
-		if (config.winterTheme())
+		if (config.themes117())
 		{
 			Collection<Plugin> plugins = pluginManager.getPlugins();
 
@@ -1018,13 +1008,24 @@ public class CyclesPlugin extends Plugin
 				{
 					if (pluginManager.isPluginEnabled(plugin))
 					{
-						boolean winterTheme = configManager.getConfiguration("hd", "winterTheme0", Boolean.TYPE);
-						if (winterTheme)
+						try
 						{
-							currentSeason = Season.WINTER;
-							winter117 = true;
-							return;
+							String seasonalTheme = configManager.getConfiguration("hd", "KEY_SEASONAL_THEME", String.class);
+							switch (seasonalTheme)
+							{
+								case "DEFAULT_THEME":
+									break;
+								case "WINTER_THEME":
+									currentSeason = Season.WINTER;
+									winter117 = true;
+									break;
+								case "AUTUMN_THEME":
+									currentSeason = Season.AUTUMN;
+									winter117 = false;
+							}
 						}
+						catch (Exception e)
+						{}
 					}
 				}
 			}

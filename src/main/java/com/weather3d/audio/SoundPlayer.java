@@ -102,8 +102,8 @@ public class SoundPlayer
                 while (System.currentTimeMillis() < endTime)
                 {
                     double percentProgress = ((double)(System.currentTimeMillis() - startTime))/ (endTime - startTime);
-
-                    int newVolume = (int)(startVolume +  sigmoid(percentProgress) * (endVolume - startVolume));
+                    double sigmoid = sigmoid(percentProgress);
+                    int newVolume = (int)(startVolume +  sigmoid * (endVolume - startVolume));
                     setVolumeLevel(newVolume);
                     Thread.sleep(100);
                 }

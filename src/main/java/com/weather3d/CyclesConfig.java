@@ -171,6 +171,8 @@ public interface CyclesConfig extends Config {
 		return true;
 	}
 
+	//set mins?
+
 	@ConfigItem(
 			keyName = "rainDensity",
 			name = "Rain Density",
@@ -367,13 +369,13 @@ public interface CyclesConfig extends Config {
 	String otherSettings = "otherSettings";
 
 	@ConfigItem(
-			keyName = "winterTheme",
-			name = "Allow 117 Winter Theme Override",
-			description = "Allows 117HD Winter Theme to override current Season",
+			keyName = "117Themes",
+			name = "Allow 117 Theme Overrides",
+			description = "Allows 117HD to override current Season with its relevant seasonal theme",
 			section = otherSettings,
 			position = 29
 	)
-	default boolean winterTheme()
+	default boolean themes117()
 	{
 		return true;
 	}
