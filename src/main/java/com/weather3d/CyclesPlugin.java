@@ -175,6 +175,7 @@ public class CyclesPlugin extends Plugin
 		{
 			if (t.getWorldLocation().getX() == playerLoc.getX() && t.getWorldLocation().getY() == playerLoc.getY())
 			{
+				System.out.println("Player not indoors");
 				isPlayerIndoors = false;
 			}
 		}
@@ -498,48 +499,45 @@ public class CyclesPlugin extends Plugin
 			appropriateSound = outdoorSound;
 		}
 
-
-
 		// Make sure the primary soundplayer is at the right volume, if it's not already fading in or whatever
-		SoundPlayer primary = weatherManager.getPrimarySoundPlayer();
-		int currentObjects = weatherManager.getWeatherObjArray().size();
-		int currentVolume = primary.getCurrentVolume();
+		int currentVolume = weatherManager.getPrimarySoundPlayer().getCurrentVolume();
 		int volumeGoal = getVolumeGoal(muffled, weather);
 		int changeRate = 6000;
 
-		if (primary.getCurrentTrack() != null && currentVolume != volumeGoal)
+		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() != null && currentVolume != volumeGoal)
 		{
 			//If the volume change handler is uninitialized, or is initialized and isn't currently changing the volume
-			if (primary.getVolumeChangeHandler() == null || !primary.getVolumeChangeHandler().isAlive())
+			if (weatherManager.getPrimarySoundPlayer().getVolumeChangeHandler() == null || !weatherManager.getPrimarySoundPlayer().getVolumeChangeHandler().isAlive())
 			{
 				log.debug("Primary at wrong volume. Setting back to " + volumeGoal);
-				primary.smoothVolumeChange(volumeGoal, changeRate);
+				weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, changeRate);
 			}
 		}
 
 		// Initialize the primary soundplayer if it ain't initialized yet, or is not playing for some reason
-		if (primary.getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
+		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
 		{
 			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor(weather)));
-			primary.setVolumeLevel(0);
-			primary.smoothVolumeChange(volumeGoal, changeRate);
-			primary.playClip(appropriateSound);
+			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
+			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, 12000);
+			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
 		}
 		//Handle looping, as well as muffling/unmuffling of sound when player walks indoors/outdoors
-		else if (primary.getCurrentTrack() != appropriateSound || primary.getTimer() > 230)
+		else if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() != appropriateSound || weatherManager.getPrimarySoundPlayer().getTimer() > 230)
 		{
-			log.debug("Looping because " + primary.getCurrentTrack() + " != " + appropriateSound + " or it was just time to loop");
-			primary.smoothVolumeChange(0, changeRate);
+			log.debug("Looping because " + weatherManager.getPrimarySoundPlayer().getCurrentTrack() + " != " + appropriateSound + " or it was just time to loop");
+			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(0, changeRate);
 			weatherManager.switchSoundPlayerPriority();
-			if (!primary.isPlaying())
+			if (!weatherManager.getPrimarySoundPlayer().isPlaying())
 			{
-				primary.setVolumeLevel(0);
-				primary.playClip(appropriateSound);
+				weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
+				weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
+				System.out.println("Set to play");
 			}
-			primary.smoothVolumeChange(volumeGoal, changeRate);
+			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, changeRate);
 		}
 
-		if (weather == Weather.STORMY && (primary.getTimer() == 90 || primary.getTimer() == 138))
+		if (weather == Weather.STORMY && (weatherManager.getPrimarySoundPlayer().getTimer() == 90 || weatherManager.getPrimarySoundPlayer().getTimer() == 138))
 			flashLightning = true;
 	}
 
