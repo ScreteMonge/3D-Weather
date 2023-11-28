@@ -175,7 +175,6 @@ public class CyclesPlugin extends Plugin
 		{
 			if (t.getWorldLocation().getX() == playerLoc.getX() && t.getWorldLocation().getY() == playerLoc.getY())
 			{
-				System.out.println("Player not indoors");
 				isPlayerIndoors = false;
 			}
 		}
@@ -532,7 +531,6 @@ public class CyclesPlugin extends Plugin
 			{
 				weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
 				weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
-				System.out.println("Set to play");
 			}
 			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, changeRate);
 		}
