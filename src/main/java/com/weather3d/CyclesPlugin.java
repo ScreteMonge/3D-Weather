@@ -1,21 +1,20 @@
 package com.weather3d;
 
 import com.google.inject.Provides;
-import javax.inject.Inject;
-import javax.swing.*;
-
 import com.weather3d.audio.SoundEffect;
 import com.weather3d.audio.SoundPlayer;
-import com.weather3d.conditions.WeatherManager;
 import com.weather3d.conditions.Biome;
 import com.weather3d.conditions.Season;
 import com.weather3d.conditions.Weather;
+import com.weather3d.conditions.WeatherManager;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.*;
+import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -25,8 +24,11 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 
+import javax.inject.Inject;
+import javax.swing.*;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Random;
 
 import static com.weather3d.audio.SoundEffect.*;
@@ -994,72 +996,90 @@ public class CyclesPlugin extends Plugin
 
 	private void syncSeason()
 	{
-		if (config.themes117())
-		{
-			Collection<Plugin> plugins = pluginManager.getPlugins();
+		boolean is117Enabled = pluginManager.getPlugins().stream()
+			.filter((plugin) -> plugin.getName().equals("117 HD"))
+			.map((plugin) -> pluginManager.isPluginEnabled(plugin)).findFirst().orElse(false);
 
-			for (Plugin plugin : plugins)
+		if (config.themes117() && is117Enabled)
+		{
+			try
 			{
-				if (plugin.getName().equals("117 HD"))
+				String seasonalTheme = configManager.getConfiguration("hd", "seasonalTheme", String.class);
+				switch (seasonalTheme)
 				{
-					if (pluginManager.isPluginEnabled(plugin))
-					{
-						try
-						{
-							String seasonalTheme = configManager.getConfiguration("hd", "KEY_SEASONAL_THEME", String.class);
-							switch (seasonalTheme)
-							{
-								case "DEFAULT_THEME":
-									break;
-								case "WINTER_THEME":
-									currentSeason = Season.WINTER;
-									winter117 = true;
-									break;
-								case "AUTUMN_THEME":
-									currentSeason = Season.AUTUMN;
-									winter117 = false;
-							}
+					case "AUTOMATIC":
+						// Not a fan of repeating 117's logic here, but can't think of a better way.
+						// Source: https://github.com/117HD/RLHD/blob/ec91118e3190add9b821350576af56af1c723848/src/main/java/rs117/hd/HdPlugin.java#L2399-L2416
+						ZonedDateTime time = ZonedDateTime.now(ZoneOffset.UTC);
+						switch (time.getMonth()) {
+							case SEPTEMBER:
+							case OCTOBER:
+							case NOVEMBER:
+								currentSeason = Season.AUTUMN;
+								winter117 = false;
+								break;
+							case DECEMBER:
+							case JANUARY:
+							case FEBRUARY:
+								currentSeason = Season.WINTER;
+								winter117 = true;
+								break;
+							default:
+								currentSeason = Season.SUMMER;
+								winter117 = false;
+								break;
 						}
-						catch (Exception e)
-						{}
-					}
+						break;
+					case "SUMMER":
+						currentSeason = Season.SUMMER;
+						winter117 = false;
+						break;
+					case "WINTER":
+						currentSeason = Season.WINTER;
+						winter117 = true;
+						break;
+					case "AUTUMN":
+						currentSeason = Season.AUTUMN;
+						winter117 = false;
 				}
 			}
-		}
+			catch (Exception e)
+			{}
+		} else {
+			winter117 = false;
 
-		winter117 = false;
-
-		switch (config.seasonType())
-		{
-			default:
-			case DYNAMIC:
-				switch ((CyclesClock.getTimeDays() / 7) % 4)
-				{
-					default:
-					case 0:
-						currentSeason = Season.SPRING;
-						return;
-					case 1:
-						currentSeason = Season.SUMMER;
-						return;
-					case 2:
-						currentSeason = Season.AUTUMN;
-						return;
-					case 3:
-						currentSeason = Season.WINTER;
-						return;
-				}
-			case SPRING:
-				currentSeason =  Season.SPRING;
-				return;
-			case SUMMER:
-				currentSeason =  Season.SUMMER;
-				return;
-			case AUTUMN:
-				currentSeason =  Season.AUTUMN;
-				return;
-			case WINTER:
-				currentSeason =  Season.WINTER;
+			switch (config.seasonType())
+			{
+				default:
+				case DYNAMIC:
+					switch ((CyclesClock.getTimeDays() / 7) % 4)
+					{
+						default:
+						case 0:
+							currentSeason = Season.SPRING;
+							return;
+						case 1:
+							currentSeason = Season.SUMMER;
+							return;
+						case 2:
+							currentSeason = Season.AUTUMN;
+							return;
+						case 3:
+							currentSeason = Season.WINTER;
+							return;
+					}
+				case SPRING:
+					currentSeason =  Season.SPRING;
+					return;
+				case SUMMER:
+					currentSeason =  Season.SUMMER;
+					return;
+				case AUTUMN:
+					currentSeason =  Season.AUTUMN;
+					return;
+				case WINTER:
+					currentSeason =  Season.WINTER;
+			}
 		}
 	}
 
