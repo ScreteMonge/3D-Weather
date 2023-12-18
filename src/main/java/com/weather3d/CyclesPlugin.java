@@ -31,6 +31,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
+import static com.weather3d.CyclesConfig.SeasonType.DYNAMIC;
+import static com.weather3d.CyclesConfig.SeasonType.HD_117;
 import static com.weather3d.audio.SoundEffect.*;
 
 @Slf4j
@@ -66,8 +68,7 @@ public class CyclesPlugin extends Plugin
 	private boolean conditionsSynced = false;
 	private boolean isPlayerIndoors = false;
 	public boolean flashLightning = false;
-	private boolean winter117 = false;
-	private int savedChunk = 0;
+    private int savedChunk = 0;
 	private int savedZPlane = -1;
 	private int zoneObjRecovery = 0;
 	private final int WINTERTODT_CHUNK = 6462;
@@ -987,7 +988,7 @@ public class CyclesPlugin extends Plugin
 			savedChunk = playerChunk;
 		}
 
-		if (winter117 && currentBiome != Biome.CAVE && currentBiome != Biome.LAVA_CAVE)
+		if (Season.WINTER.equals(currentSeason) && currentBiome != Biome.CAVE && currentBiome != Biome.LAVA_CAVE)
 		{
 			currentBiome = Biome.ARCTIC;
 			savedChunk = -1;
@@ -1000,86 +1001,79 @@ public class CyclesPlugin extends Plugin
 			.filter((plugin) -> plugin.getName().equals("117 HD"))
 			.map((plugin) -> pluginManager.isPluginEnabled(plugin)).findFirst().orElse(false);
 
-		if (config.themes117() && is117Enabled)
-		{
-			try
-			{
-				String seasonalTheme = configManager.getConfiguration("hd", "seasonalTheme", String.class);
-				switch (seasonalTheme)
-				{
-					case "AUTOMATIC":
-						// Not a fan of repeating 117's logic here, but can't think of a better way.
-						// Source: https://github.com/117HD/RLHD/blob/ec91118e3190add9b821350576af56af1c723848/src/main/java/rs117/hd/HdPlugin.java#L2399-L2416
-						ZonedDateTime time = ZonedDateTime.now(ZoneOffset.UTC);
-						switch (time.getMonth()) {
-							case SEPTEMBER:
-							case OCTOBER:
-							case NOVEMBER:
-								currentSeason = Season.AUTUMN;
-								winter117 = false;
-								break;
-							case DECEMBER:
-							case JANUARY:
-							case FEBRUARY:
-								currentSeason = Season.WINTER;
-								winter117 = true;
-								break;
-							default:
-								currentSeason = Season.SUMMER;
-								winter117 = false;
-								break;
-						}
-						break;
-					case "SUMMER":
-						currentSeason = Season.SUMMER;
-						winter117 = false;
-						break;
-					case "WINTER":
-						currentSeason = Season.WINTER;
-						winter117 = true;
-						break;
-					case "AUTUMN":
-						currentSeason = Season.AUTUMN;
-						winter117 = false;
-				}
-			}
-			catch (Exception e)
-			{}
-		} else {
-			winter117 = false;
+		// If the season type is 117 and it's not enabled then fallback to DYNAMIC
+		CyclesConfig.SeasonType seasonType = config.seasonType().equals(HD_117) && !is117Enabled ? DYNAMIC : config.seasonType();
 
-			switch (config.seasonType())
-			{
-				default:
-				case DYNAMIC:
-					switch ((CyclesClock.getTimeDays() / 7) % 4)
+        switch (seasonType)
+		{
+			default:
+			case DYNAMIC:
+				switch ((CyclesClock.getTimeDays() / 7) % 4)
+				{
+					default:
+					case 0:
+						currentSeason = Season.SPRING;
+						return;
+					case 1:
+						currentSeason = Season.SUMMER;
+						return;
+					case 2:
+						currentSeason = Season.AUTUMN;
+						return;
+					case 3:
+						currentSeason = Season.WINTER;
+						return;
+				}
+			case SPRING:
+				currentSeason =  Season.SPRING;
+				return;
+			case SUMMER:
+				currentSeason =  Season.SUMMER;
+				return;
+			case AUTUMN:
+				currentSeason =  Season.AUTUMN;
+				return;
+			case WINTER:
+				currentSeason =  Season.WINTER;
+			case HD_117:
+				try
+				{
+					String seasonalTheme = configManager.getConfiguration("hd", "seasonalTheme", String.class);
+					switch (seasonalTheme)
 					{
-						default:
-						case 0:
-							currentSeason = Season.SPRING;
-							return;
-						case 1:
+						case "AUTOMATIC":
+							// Not a fan of repeating 117's logic here, but can't think of a better way.
+							// Source: https://github.com/117HD/RLHD/blob/ec91118e3190add9b821350576af56af1c723848/src/main/java/rs117/hd/HdPlugin.java#L2399-L2416
+							ZonedDateTime time = ZonedDateTime.now(ZoneOffset.UTC);
+							switch (time.getMonth()) {
+								case SEPTEMBER:
+								case OCTOBER:
+								case NOVEMBER:
+									currentSeason = Season.AUTUMN;
+									break;
+								case DECEMBER:
+								case JANUARY:
+								case FEBRUARY:
+									currentSeason = Season.WINTER;
+                                    break;
+								default:
+									currentSeason = Season.SUMMER;
+                                    break;
+							}
+							break;
+						case "SUMMER":
 							currentSeason = Season.SUMMER;
-							return;
-						case 2:
-							currentSeason = Season.AUTUMN;
-							return;
-						case 3:
+							break;
+						case "WINTER":
 							currentSeason = Season.WINTER;
-							return;
-					}
-				case SPRING:
-					currentSeason =  Season.SPRING;
-					return;
-				case SUMMER:
-					currentSeason =  Season.SUMMER;
-					return;
-				case AUTUMN:
-					currentSeason =  Season.AUTUMN;
-					return;
-				case WINTER:
-					currentSeason =  Season.WINTER;
-			}
+                            break;
+						case "AUTUMN":
+							currentSeason = Season.AUTUMN;
+                    }
+				}
+				catch (Exception e)
+				{}
+				break;
 		}
 	}
 
