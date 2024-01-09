@@ -20,6 +20,7 @@ public interface CyclesConfig extends Config {
 
 	enum SeasonType {
 		DYNAMIC,
+		HD_117,
 		SPRING,
 		SUMMER,
 		AUTUMN,
@@ -359,24 +360,5 @@ public interface CyclesConfig extends Config {
 	default boolean enableLightning()
 	{
 		return false;
-	}
-
-	@ConfigSection(
-			name = "Other",
-			description = "Other Settings",
-			position = 28
-	)
-	String otherSettings = "otherSettings";
-
-	@ConfigItem(
-			keyName = "117Themes",
-			name = "Allow 117 Theme Overrides",
-			description = "Allows 117HD to override current Season with its relevant seasonal theme",
-			section = otherSettings,
-			position = 29
-	)
-	default boolean themes117()
-	{
-		return true;
 	}
 }
