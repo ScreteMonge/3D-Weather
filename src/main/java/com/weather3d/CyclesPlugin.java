@@ -110,8 +110,9 @@ public class CyclesPlugin extends Plugin
 	@Subscribe
 	public void onClientTick(ClientTick event)
 	{
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			Weather weatherType = weatherManager.getWeatherType();
 
 			if (weatherType == Weather.CLOUDY
@@ -194,18 +195,19 @@ public class CyclesPlugin extends Plugin
 			conditionsSynced = true;
 		}
 
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
-			if (weatherManager.isFading())
+			WeatherManager wm = weatherManagerList.get(i);
+			if (wm.isFading())
 			{
-				fadeWeatherManager(weatherManager);
+				fadeWeatherManager(wm);
 			}
 			else
 			{
-				handleWeatherChanges(weatherManager);
+				handleWeatherChanges(wm);
 			}
 
-			handleSoundChanges(weatherManager);
+			handleSoundChanges(wm);
 		}
 
 		clearFadedWeatherManagers();
@@ -308,8 +310,9 @@ public class CyclesPlugin extends Plugin
 
 		if (event.getKey().equals("toggleAmbience"))
 		{
-			for (WeatherManager weatherManager : weatherManagerList)
+			for (int i = 0; i < weatherManagerList.size(); i++)
 			{
+				WeatherManager weatherManager = weatherManagerList.get(i);
 				if (weatherManager.getWeatherType().isHasSound())
 				{
 					if (config.toggleAmbience())
@@ -358,8 +361,9 @@ public class CyclesPlugin extends Plugin
 
 			if (playerChunk == WINTERTODT_CHUNK)
 			{
-				for (WeatherManager weatherManager : weatherManagerList)
+				for (int i = 0; i < weatherManagerList.size(); i++)
 				{
+					WeatherManager weatherManager = weatherManagerList.get(i);
 					if (weatherManager.getWeatherType() == Weather.SNOWY)
 					{
 						clientThread.invoke(() -> clearWeatherObjects(weatherManager));
@@ -375,8 +379,9 @@ public class CyclesPlugin extends Plugin
 		if (enabled)
 			return;
 
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			if (weatherManager.getWeatherType() == weather)
 			{
 				clientThread.invoke(() -> clearWeatherObjects(weatherManager));
@@ -387,8 +392,9 @@ public class CyclesPlugin extends Plugin
 
 	private void handleConfigDensityChange(Weather weatherType, int newDensity)
 	{
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			Weather weather = weatherManager.getWeatherType();
 			if (weather != weatherType)
 				continue;
@@ -410,8 +416,9 @@ public class CyclesPlugin extends Plugin
 	public void handleWeatherManagers()
 	{
 		boolean activeManager = false;
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			weatherManager.setFading(true);
 			if (weatherManager.getWeatherType() == currentWeather)
 			{
@@ -664,8 +671,9 @@ public class CyclesPlugin extends Plugin
 
 	public void clearAllWeatherManagers()
 	{
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			clearWeatherObjects(weatherManager);
 			weatherManager.stopManagerSoundPlayers();
 		}
@@ -844,8 +852,9 @@ public class CyclesPlugin extends Plugin
 			return;
 		}
 
-		for (WeatherManager weatherManager : weatherManagerList)
+		for (int i = 0; i < weatherManagerList.size(); i++)
 		{
+			WeatherManager weatherManager = weatherManagerList.get(i);
 			Weather weatherType = weatherManager.getWeatherType();
 			ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 			int size = (int) (array.size() * 0.8);
@@ -986,12 +995,6 @@ public class CyclesPlugin extends Plugin
 		{
 			currentBiome = BiomeChunkMap.checkBiome(playerChunk);
 			savedChunk = playerChunk;
-		}
-
-		if (Season.WINTER.equals(currentSeason) && currentBiome != Biome.CAVE && currentBiome != Biome.LAVA_CAVE)
-		{
-			currentBiome = Biome.ARCTIC;
-			savedChunk = -1;
 		}
 	}
 
