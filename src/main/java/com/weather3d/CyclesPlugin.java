@@ -374,6 +374,12 @@ public class CyclesPlugin extends Plugin
 		}
 	}
 
+	private int getAmbientVolume()
+	{
+		return config.useAreaSoundsVolume() ?
+			client.getPreferences().getAreaSoundEffectVolume() : config.ambientVolume();
+	}
+
 	private void handleConfigEnableChange(Weather weather, boolean enabled)
 	{
 		if (enabled)
@@ -526,7 +532,7 @@ public class CyclesPlugin extends Plugin
 		// Initialize the primary soundplayer if it ain't initialized yet, or is not playing for some reason
 		if (weatherManager.getPrimarySoundPlayer().getCurrentTrack() == null || !weatherManager.getPrimarySoundPlayer().isPlaying())
 		{
-			log.debug("Initializing soundplayer at volume " + (int)(config.ambientVolume() * getWeatherDensityFactor(weather)));
+			log.debug("Initializing soundplayer at volume " + (int)(getAmbientVolume() * getWeatherDensityFactor(weather)));
 			weatherManager.getPrimarySoundPlayer().setVolumeLevel(0);
 			weatherManager.getPrimarySoundPlayer().smoothVolumeChange(volumeGoal, 12000);
 			weatherManager.getPrimarySoundPlayer().playClip(appropriateSound);
@@ -579,7 +585,7 @@ public class CyclesPlugin extends Plugin
 	public int getVolumeGoal(boolean muffled, Weather weather)
 	{
 		double weatherDensityFactor = getWeatherDensityFactor(weather);
-		double volumeDouble = config.ambientVolume() * weatherDensityFactor;
+		double volumeDouble = getAmbientVolume() * weatherDensityFactor;
 
 		if (muffled)
 			volumeDouble = config.muffledVolume() * weatherDensityFactor;
