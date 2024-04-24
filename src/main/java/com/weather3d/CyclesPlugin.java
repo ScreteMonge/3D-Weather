@@ -409,12 +409,10 @@ public class CyclesPlugin extends Plugin
 			{
 				ArrayList<WeatherObject> array = weatherManager.getWeatherObjArray();
 
-				clientThread.invoke(() -> {
-					while (array.size() > newDensity)
-					{
-						removeWeatherObject(0, array);
-					}
-				});
+				while (array.size() > newDensity)
+				{
+					removeWeatherObject(0, array);
+				}
 			}
 		}
 	}
@@ -776,7 +774,7 @@ public class CyclesPlugin extends Plugin
 			return;
 
 		WeatherObject weatherObject = weatherArray.get(index);
-		weatherObject.getRuneLiteObject().setActive(false);
+		clientThread.invokeLater(() -> weatherObject.getRuneLiteObject().setActive(false));
 		weatherArray.remove(index);
 	}
 

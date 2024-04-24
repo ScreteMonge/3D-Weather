@@ -36,8 +36,10 @@ public class CyclesOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (!config.toggleOverlay())
+        if (!config.toggleOverlay() || panelComponent == null)
+        {
             return null;
+        }
 
         Weather weather = plugin.getCurrentWeather();
         Biome biome = plugin.getCurrentBiome();
