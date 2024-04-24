@@ -189,7 +189,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "rainDensity",
 			name = "Rain Density",
-			description = "Sets the number of Rain objects that spawn while Rainy",
+			description = "<html>Sets the number of Rain objects that spawn while Rainy<br>Max = 2000</html>",
 			section = weatherToggles,
 			position = 14
 	)
@@ -202,7 +202,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "stormDensity",
 			name = "Storm Density",
-			description = "Sets the number of Rain objects that spawn while Stormy",
+			description = "<html>Sets the number of Rain objects that spawn while Stormy<br>Max = 3000</html>",
 			section = weatherToggles,
 			position = 15
 	)
@@ -227,7 +227,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "snowDensity",
 			name = "Snow Density",
-			description = "Sets the number of Snow objects that spawn while Snowy",
+			description = "<html>Sets the number of Snow objects that spawn while Snowy<br>Max = 2000</html>",
 			section = weatherToggles,
 			position = 17
 	)
@@ -252,7 +252,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "cloudyDensity",
 			name = "Cloud Density",
-			description = "Sets the number of Cloud objects that spawn while Cloudy",
+			description = "<html>Sets the number of Cloud objects that spawn while Cloudy<br>Max = 1000</html>",
 			section = weatherToggles,
 			position = 19
 	)
@@ -265,7 +265,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "partlyCloudyDensity",
 			name = "Partly Cloudy Density",
-			description = "Sets the number of Cloud objects that spawn while Partly Cloudy",
+			description = "<html>Sets the number of Cloud objects that spawn while Partly Cloudy<br>Max = 300</html>",
 			section = weatherToggles,
 			position = 20
 	)
@@ -290,7 +290,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "ashfallDensity",
 			name = "Ashfall Density",
-			description = "Sets the number of Ash objects that spawn while in Ashfall",
+			description = "<html>Sets the number of Ash objects that spawn while in Ashfall<br>Max = 1200</html>",
 			section = weatherToggles,
 			position = 22
 	)
@@ -315,7 +315,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "foggyDensity",
 			name = "Fog Density",
-			description = "Sets the number of Fog objects that spawn while Foggy",
+			description = "<html>Sets the number of Fog objects that spawn while Foggy<br>Max = 1800</html>",
 			section = weatherToggles,
 			position = 24
 	)
@@ -340,7 +340,7 @@ public interface CyclesConfig extends Config {
 	@ConfigItem(
 			keyName = "starryDensity",
 			name = "Stars Density",
-			description = "Sets the number of Star objects that spawn while Starry",
+			description = "<html>Sets the number of Star objects that spawn while Starry<br>Max = 2000</html>",
 			section = weatherToggles,
 			position = 26
 	)

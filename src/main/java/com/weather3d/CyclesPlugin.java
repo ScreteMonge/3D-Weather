@@ -757,10 +757,16 @@ public class CyclesPlugin extends Plugin
 		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
 		Model weatherModel = modelHandler.getWeatherModel(weather, objectVariant);
 		int radius = modelHandler.getModelRadius(weather);
+		boolean drawFrontTilesFirst = true;
+		if (plane > 0)
+		{
+			radius = 0;
+			drawFrontTilesFirst = false;
+		}
 
 		runeLiteObject.setModel(weatherModel);
 		runeLiteObject.setRadius(radius);
-		runeLiteObject.setDrawFrontTilesFirst(true);
+		runeLiteObject.setDrawFrontTilesFirst(drawFrontTilesFirst);
 		runeLiteObject.setAnimation(weatherAnimation);
 		runeLiteObject.setLocation(lp, plane);
 		runeLiteObject.setShouldLoop(true);
@@ -883,7 +889,8 @@ public class CyclesPlugin extends Plugin
 		{
 			for (int x = 0; x < Constants.SCENE_SIZE; ++x)
 			{
-				for (int y = 0; y < Constants.SCENE_SIZE; ++y) {
+				for (int y = 0; y < Constants.SCENE_SIZE; ++y)
+				{
 					Tile tile = tiles[z][x][y];
 
 					if (tile == null)
@@ -893,6 +900,25 @@ public class CyclesPlugin extends Plugin
 
 					if ((flag & Constants.TILE_FLAG_UNDER_ROOF) != 0)
 						continue;
+
+					if (zLayer > 0)
+					{
+						boolean bridgeFlag = false;
+						for (int i = 0; i < 4; i++)
+						{
+							int floorFlag = settings[i][x][y];
+							if ((floorFlag & Constants.TILE_FLAG_BRIDGE) != 0)
+							{
+								bridgeFlag = true;
+								break;
+							}
+						}
+
+						if (bridgeFlag)
+						{
+							continue;
+						}
+					}
 
 					availableTiles.add(tile);
 
