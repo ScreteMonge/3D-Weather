@@ -1024,7 +1024,11 @@ public class CyclesPlugin extends Plugin
 
 	private void syncBiome()
 	{
-		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
+		Player player = client.getLocalPlayer();
+		if (player == null)
+			return;
+
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, player.getLocalLocation(), client.getPlane());
 		int playerChunk = wp.getRegionID();
 
 		if (savedChunk != playerChunk)
