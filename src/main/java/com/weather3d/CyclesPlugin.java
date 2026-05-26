@@ -82,7 +82,7 @@ public class CyclesPlugin extends Plugin
 	@Getter
 	private Biome currentBiome = Biome.GRASSLAND;
 	@Getter
-	private Weather currentWeather;
+	private Weather currentWeather = Weather.COVERED;
 
 	@Override
 	protected void startUp() throws Exception
