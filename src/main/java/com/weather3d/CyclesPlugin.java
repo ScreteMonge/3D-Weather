@@ -357,20 +357,26 @@ public class CyclesPlugin extends Plugin
 			if (config.enableWintertodtSnow())
 				return;
 
-			int playerChunk = client.getLocalPlayer().getWorldLocation().getRegionID();
+			clientThread.invokeLater(() -> {
+				Player player = client.getLocalPlayer();
+				if (player == null)
+					return;
 
-			if (playerChunk == WINTERTODT_CHUNK)
-			{
-				for (int i = 0; i < weatherManagerList.size(); i++)
+				int playerChunk = player.getWorldLocation().getRegionID();
+
+				if (playerChunk == WINTERTODT_CHUNK)
 				{
-					WeatherManager weatherManager = weatherManagerList.get(i);
-					if (weatherManager.getWeatherType() == Weather.SNOWY)
+					for (int i = 0; i < weatherManagerList.size(); i++)
 					{
-						clientThread.invoke(() -> clearWeatherObjects(weatherManager));
-						clientThread.invoke(weatherManager::stopManagerSoundPlayers);
+						WeatherManager weatherManager = weatherManagerList.get(i);
+						if (weatherManager.getWeatherType() == Weather.SNOWY)
+						{
+							clearWeatherObjects(weatherManager);
+							weatherManager.stopManagerSoundPlayers();
+						}
 					}
 				}
-			}
+			});
 		}
 	}
 
