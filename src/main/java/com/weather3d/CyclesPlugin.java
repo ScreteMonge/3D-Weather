@@ -217,6 +217,11 @@ public class CyclesPlugin extends Plugin
 			transitionZPlane();
 			savedZPlane = client.getPlane();
 		}
+
+		if (config.disableWildernessWeather() && currentBiome == Biome.WILDERNESS)
+		{
+			clientThread.invoke(this::clearAllWeatherManagers);
+		}
 	}
 
 	@Subscribe
@@ -263,6 +268,15 @@ public class CyclesPlugin extends Plugin
 				return;
 
 			if (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE)
+				clientThread.invoke(this::clearAllWeatherManagers);
+		}
+
+		if (key.equals("disableWildernessWeather"))
+		{
+			if (!config.disableWildernessWeather())
+				return;
+
+			if (currentBiome == Biome.WILDERNESS)
 				clientThread.invoke(this::clearAllWeatherManagers);
 		}
 
@@ -458,6 +472,9 @@ public class CyclesPlugin extends Plugin
 			return;
 
 		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
+			return;
+
+		if (config.disableWildernessWeather() && currentBiome == Biome.WILDERNESS)
 			return;
 
 		//Fade out inappropriate weathermanager soundplayers
@@ -697,6 +714,9 @@ public class CyclesPlugin extends Plugin
 		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
 			return;
 
+		if (config.disableWildernessWeather() && currentBiome == Biome.WILDERNESS)
+			return;
+
 		if (!weatherEnabled(weather))
 			return;
 
@@ -863,6 +883,12 @@ public class CyclesPlugin extends Plugin
 	public void handleZoneTransition()
 	{
 		if (config.weatherType() != CyclesConfig.WeatherType.DYNAMIC && config.disableWeatherUnderground() && (currentBiome == Biome.CAVE || currentBiome == Biome.LAVA_CAVE))
+		{
+			clientThread.invoke(this::clearAllWeatherManagers);
+			return;
+		}
+
+		if (config.disableWildernessWeather() && currentBiome == Biome.WILDERNESS)
 		{
 			clientThread.invoke(this::clearAllWeatherManagers);
 			return;

@@ -41,8 +41,7 @@ public interface CyclesConfig extends Config {
 			section = generalSettings,
 			position = 1
 	)
-	default WeatherType weatherType()
-	{
+	default WeatherType weatherType() {
 		return WeatherType.DYNAMIC;
 	}
 
@@ -53,8 +52,7 @@ public interface CyclesConfig extends Config {
 			section = generalSettings,
 			position = 2
 	)
-	default SeasonType seasonType()
-	{
+	default SeasonType seasonType() {
 		return SeasonType.DYNAMIC;
 	}
 
@@ -65,8 +63,7 @@ public interface CyclesConfig extends Config {
 			section = generalSettings,
 			position = 3
 	)
-	default boolean toggleOverlay()
-	{
+	default boolean toggleOverlay() {
 		return true;
 	}
 
@@ -77,8 +74,7 @@ public interface CyclesConfig extends Config {
 			section = generalSettings,
 			position = 4
 	)
-	default boolean miniOverlay()
-	{
+	default boolean miniOverlay() {
 		return false;
 	}
 
@@ -89,15 +85,23 @@ public interface CyclesConfig extends Config {
 			section = generalSettings,
 			position = 5
 	)
-	default boolean disableWeatherUnderground()
-	{
+	default boolean disableWeatherUnderground() {
 		return true;
 	}
+
+	@ConfigItem(
+			keyName = "disableWildernessWeather",
+			name = "Disable Weather in Wilderness",
+			description = "Disables weather from occurring in the Wilderness, regardless of the set Weather Type",
+			section = weatherToggles,
+			position = 6
+	)
+	default boolean disableWildernessWeather() { return false; }
 
 	@ConfigSection(
 			name = "Audio",
 			description = "Audio settings",
-			position = 6
+			position = 7
 	)
 	String audioSettings = "audioSettings";
 
@@ -106,10 +110,9 @@ public interface CyclesConfig extends Config {
 			name = "Enable Ambience",
 			description = "Toggles ambient Weather sounds on/off",
 			section = audioSettings,
-			position = 7
+			position = 8
 	)
-	default boolean toggleAmbience()
-	{
+	default boolean toggleAmbience() {
 		return true;
 	}
 
@@ -118,24 +121,22 @@ public interface CyclesConfig extends Config {
 			name = "Ambient Volume",
 			description = "Sets the volume of ambient Weather sounds",
 			section = audioSettings,
-			position = 8
+			position = 9
 	)
 	@Units(Units.PERCENT)
 	@Range(max = 100)
-	default int ambientVolume()
-	{
+	default int ambientVolume() {
 		return 50;
 	}
 
 	@ConfigItem(
-		keyName = "useAreaSoundsVolume",
-		name = "Use Area Sounds Volume",
-		description = "Use the in-game \"Area Sounds\" audio setting, overriding the \"Ambient Volume\" setting",
-		section = audioSettings,
-		position = 9
+			keyName = "useAreaSoundsVolume",
+			name = "Use Area Sounds Volume",
+			description = "Use the in-game \"Area Sounds\" audio setting, overriding the \"Ambient Volume\" setting",
+			section = audioSettings,
+			position = 10
 	)
-	default boolean useAreaSoundsVolume()
-	{
+	default boolean useAreaSoundsVolume() {
 		return false;
 	}
 
@@ -144,12 +145,11 @@ public interface CyclesConfig extends Config {
 			name = "Muffled Volume",
 			description = "Sets the volume of muffled Weather sounds while indoors",
 			section = audioSettings,
-			position = 10
+			position = 11
 	)
 	@Units(Units.PERCENT)
 	@Range(max = 100)
-	default int muffledVolume()
-	{
+	default int muffledVolume() {
 		return 50;
 	}
 
@@ -158,17 +158,16 @@ public interface CyclesConfig extends Config {
 			name = "Disable Indoor Muffling",
 			description = "Prevents ambience sound from being muffled while standing indoors.",
 			section = audioSettings,
-			position = 11
+			position = 12
 	)
-	default boolean disableIndoorMuffling()
-	{
+	default boolean disableIndoorMuffling() {
 		return false;
 	}
 
 	@ConfigSection(
 			name = "Weathers",
 			description = "Weather Options",
-			position = 12
+			position = 13
 	)
 	String weatherToggles = "weatherToggles";
 
@@ -177,10 +176,9 @@ public interface CyclesConfig extends Config {
 			name = "Rain Enabled",
 			description = "Allows Rain objects to appear while Rainy or Stormy",
 			section = weatherToggles,
-			position = 13
+			position = 14
 	)
-	default boolean enableRain()
-	{
+	default boolean enableRain() {
 		return true;
 	}
 
@@ -191,11 +189,10 @@ public interface CyclesConfig extends Config {
 			name = "Rain Density",
 			description = "<html>Sets the number of Rain objects that spawn while Rainy<br>Max = 2000</html>",
 			section = weatherToggles,
-			position = 14
+			position = 15
 	)
 	@Range(max = 2000)
-	default int rainDensity()
-	{
+	default int rainDensity() {
 		return 400;
 	}
 
@@ -204,11 +201,10 @@ public interface CyclesConfig extends Config {
 			name = "Storm Density",
 			description = "<html>Sets the number of Rain objects that spawn while Stormy<br>Max = 3000</html>",
 			section = weatherToggles,
-			position = 15
+			position = 16
 	)
 	@Range(max = 3000)
-	default int stormDensity()
-	{
+	default int stormDensity() {
 		return 600;
 	}
 
@@ -217,10 +213,9 @@ public interface CyclesConfig extends Config {
 			name = "Snow Enabled",
 			description = "Allows Snow objects to appear while Snowy",
 			section = weatherToggles,
-			position = 16
+			position = 17
 	)
-	default boolean enableSnow()
-	{
+	default boolean enableSnow() {
 		return true;
 	}
 
@@ -229,11 +224,10 @@ public interface CyclesConfig extends Config {
 			name = "Snow Density",
 			description = "<html>Sets the number of Snow objects that spawn while Snowy<br>Max = 2000</html>",
 			section = weatherToggles,
-			position = 17
+			position = 18
 	)
 	@Range(max = 2000)
-	default int snowDensity()
-	{
+	default int snowDensity() {
 		return 400;
 	}
 
@@ -242,10 +236,9 @@ public interface CyclesConfig extends Config {
 			name = "Clouds Enabled",
 			description = "Allows Cloud objects to appear while Cloudy or Partly Cloudy",
 			section = weatherToggles,
-			position = 18
+			position = 19
 	)
-	default boolean enableClouds()
-	{
+	default boolean enableClouds() {
 		return true;
 	}
 
@@ -254,11 +247,10 @@ public interface CyclesConfig extends Config {
 			name = "Cloud Density",
 			description = "<html>Sets the number of Cloud objects that spawn while Cloudy<br>Max = 1000</html>",
 			section = weatherToggles,
-			position = 19
+			position = 20
 	)
 	@Range(max = 1000)
-	default int cloudyDensity()
-	{
+	default int cloudyDensity() {
 		return 200;
 	}
 
@@ -267,11 +259,10 @@ public interface CyclesConfig extends Config {
 			name = "Partly Cloudy Density",
 			description = "<html>Sets the number of Cloud objects that spawn while Partly Cloudy<br>Max = 300</html>",
 			section = weatherToggles,
-			position = 20
+			position = 21
 	)
 	@Range(max = 300)
-	default int partlyCloudyDensity()
-	{
+	default int partlyCloudyDensity() {
 		return 50;
 	}
 
@@ -280,10 +271,9 @@ public interface CyclesConfig extends Config {
 			name = "Ash Enabled",
 			description = "Allows Ash objects to appear while in Ashfall",
 			section = weatherToggles,
-			position = 21
+			position = 22
 	)
-	default boolean enableAsh()
-	{
+	default boolean enableAsh() {
 		return false;
 	}
 
@@ -292,11 +282,10 @@ public interface CyclesConfig extends Config {
 			name = "Ashfall Density",
 			description = "<html>Sets the number of Ash objects that spawn while in Ashfall<br>Max = 1200</html>",
 			section = weatherToggles,
-			position = 22
+			position = 23
 	)
 	@Range(max = 1200)
-	default int ashfallDensity()
-	{
+	default int ashfallDensity() {
 		return 200;
 	}
 
@@ -305,10 +294,9 @@ public interface CyclesConfig extends Config {
 			name = "Fog Enabled",
 			description = "Allows Fog objects to appear while Foggy",
 			section = weatherToggles,
-			position = 23
+			position = 24
 	)
-	default boolean enableFog()
-	{
+	default boolean enableFog() {
 		return false;
 	}
 
@@ -317,11 +305,10 @@ public interface CyclesConfig extends Config {
 			name = "Fog Density",
 			description = "<html>Sets the number of Fog objects that spawn while Foggy<br>Max = 1800</html>",
 			section = weatherToggles,
-			position = 24
+			position = 25
 	)
 	@Range(max = 1800)
-	default int foggyDensity()
-	{
+	default int foggyDensity() {
 		return 500;
 	}
 
@@ -330,10 +317,9 @@ public interface CyclesConfig extends Config {
 			name = "Stars Enabled",
 			description = "Allows Star objects to appear while in other Realms",
 			section = weatherToggles,
-			position = 25
+			position = 26
 	)
-	default boolean enableStars()
-	{
+	default boolean enableStars() {
 		return true;
 	}
 
@@ -342,11 +328,10 @@ public interface CyclesConfig extends Config {
 			name = "Stars Density",
 			description = "<html>Sets the number of Star objects that spawn while Starry<br>Max = 2000</html>",
 			section = weatherToggles,
-			position = 26
+			position = 27
 	)
 	@Range(max = 2000)
-	default int starryDensity()
-	{
+	default int starryDensity() {
 		return 400;
 	}
 
@@ -355,10 +340,9 @@ public interface CyclesConfig extends Config {
 			name = "Enable Wintertodt Snow",
 			description = "Allows Snow objects to appear at Wintertodt while Snowing (may make it difficult to see incoming attacks)",
 			section = weatherToggles,
-			position = 27
+			position = 28
 	)
-	default boolean enableWintertodtSnow()
-	{
+	default boolean enableWintertodtSnow() {
 		return true;
 	}
 
@@ -367,10 +351,9 @@ public interface CyclesConfig extends Config {
 			name = "Enable Lightning",
 			description = "PHOTOSENSITIVITY WARNING - Allows Lightning flashes to occur during Stormy weather",
 			section = weatherToggles,
-			position = 28
+			position = 29
 	)
-	default boolean enableLightning()
-	{
+	default boolean enableLightning() {
 		return false;
 	}
 }
