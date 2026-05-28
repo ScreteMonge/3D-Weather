@@ -50,15 +50,15 @@ public class SoundPlayer
             return;
         }
 
-        trackPlayer.getPlayList().clear();
+        trackPlayer.clearPlayList();
         handlePlayThread = new Thread(() -> {
             try
             {
                 String soundLink = soundEffect.getSoundFile();
                 if (soundLink.toLowerCase().startsWith("http"))
-                    trackPlayer.addToPlayList(new URL(soundLink));
+                    trackPlayer.add(new URL(soundLink));
                 else
-                    trackPlayer.addToPlayList(new File(soundLink)); //this is here for local testing
+                    trackPlayer.add(new File(soundLink)); //this is here for local testing
                 trackPlayer.play();
             }
             catch (Exception e)
